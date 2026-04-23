@@ -1,0 +1,38 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "chaster-crm",
+  "homepage": "https://chaster.ai/",
+  "items": [
+    {
+      "name": "chaster-crm",
+      "type": "registry:block",
+      "title": "Chaster CRM",
+      "description": "Chaster CRM — multi-tenant B2B platform built with Shadcn Admin Kit",
+      "registryDependencies": [
+        "item",
+        "progress",
+        "tabs",
+        "toggle",
+        "toggle-group",
+        "https://marmelab.com/shadcn-admin-kit/r/admin.json"
+      ],
+      "dependencies": [
+        "@hello-pangea/dnd@^18.0.1",
+        "@nivo/bar@^0.99.0",
+        "faker@^5.5.3",
+        "jsonexport@^3.2.0",
+        "papaparse@^5.5.3",
+        "ra-supabase-core@^3.5.1",
+        "ra-supabase-language-english@^3.5.0",
+        "zod@^4.0.5",
+        "@tanstack/query-async-storage-persister@^5.90.22",
+        "@tanstack/react-query-persist-client@^5.90.22",
+        "dompurify@^3.3.1",
+        "marked@^17.0.1",
+        "@streamparser/json-whatwg@^0.0.22",
+        "mime@^4.1.0"
+      ],
+      "files": []
+    }
+  ]
+}

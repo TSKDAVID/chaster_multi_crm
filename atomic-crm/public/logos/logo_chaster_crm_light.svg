@@ -1,0 +1,12 @@
+<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="800" rx="120" fill="#f4f4f5"/>
+  <text
+    x="400"
+    y="520"
+    text-anchor="middle"
+    font-family="system-ui, Segoe UI, sans-serif"
+    font-size="420"
+    font-weight="700"
+    fill="#18181b"
+  >C</text>
+</svg>
