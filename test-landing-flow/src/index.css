@@ -1,0 +1,15 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, "Segoe UI", Roboto, sans-serif;
+  background: #020617;
+  color: #f8fafc;
+}
+
+h1,
+p {
+  margin: 0;
+}

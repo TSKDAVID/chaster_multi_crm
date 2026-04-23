@@ -1,0 +1,74 @@
+Chaster Client Support Policy (Test Document)
+
+Company: Northwind Home Electronics
+Version: 2026.04
+Owner: Support Operations Team
+
+1. Business Hours
+- Live chat support: Monday-Friday, 09:00-18:00 local time.
+- Email support: 24/7 intake, responses during business hours.
+- Weekend coverage: urgent billing and account lockout issues only.
+
+2. First Response Targets
+- Chat: under 2 minutes.
+- Email: under 30 minutes for priority customers, under 4 hours standard.
+- Escalated technical cases: acknowledge within 15 minutes.
+
+3. Order and Shipping FAQ
+Q: How long does shipping take?
+A: Standard shipping takes 3-5 business days. Express shipping takes 1-2 business days.
+
+Q: How do customers track orders?
+A: A tracking link is sent by email once the order is dispatched. Agents can also copy tracking from the order panel.
+
+Q: Do we support international shipping?
+A: Yes, to selected regions. Typical delivery window is 7-12 business days.
+
+4. Returns and Refunds
+- Return window: 14 days from delivery for unopened items.
+- Opened items are eligible only for manufacturer defects.
+- Refund processing: 5-10 business days after warehouse confirmation.
+- Original shipping fees are non-refundable unless item arrived damaged.
+
+5. Billing and Subscriptions
+Q: How do customers cancel subscription?
+A: Customers can cancel in account settings. Access remains until end of billing cycle.
+
+Q: Can invoices be reissued?
+A: Yes, agents can reissue invoices with updated legal entity details after verification.
+
+Q: What verification is required for billing changes?
+A: Confirm account email, last invoice ID, and company name on file.
+
+6. Account Security
+- Password reset requires email verification.
+- If a user reports account takeover, lock account immediately and escalate to Security.
+- Two-factor authentication should be recommended for all admin users.
+
+7. Escalation Rules
+Escalate to Tier 2 when:
+- issue impacts payment processing
+- repeated failure after 2 guided troubleshooting attempts
+- customer reports data mismatch across devices
+
+Escalate to Engineering when:
+- issue is reproducible in latest production build
+- severity is SEV1 (system down) or SEV2 (critical function blocked)
+- logs show API failures not resolved by retry
+
+8. Communication Guidelines
+- Start with empathy and clear acknowledgement.
+- Confirm customer goal in one sentence.
+- Provide step-by-step actions in numbered format.
+- End with confirmation request: “Did this solve your issue?”
+
+9. Case Closure Checklist
+- Root cause recorded.
+- Resolution steps documented.
+- Customer confirmation captured.
+- Follow-up reminder scheduled if needed.
+
+10. Internal Notes
+This is a testing document for CRM knowledge base indexing.
+Expected keywords:
+shipping, refund, billing, invoice, escalation, account security, support SLA.

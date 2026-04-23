@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Chaster Widget Demo</title>
+  </head>
+  <body>
+    <script src="./dist/chaster-widget.iife.js"></script>
+    <script>
+      async function hmacHex(secret, message) {
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          "raw",
+          enc.encode(secret),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"]
+        );
+        const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+        return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      const tenantId = "b84b639c-1c31-48aa-bc42-dbed2d064c78";
+      const appId = "app-12345678";
+      const guestId = "guest-local-1";
+      const hmacSecret = "local-dev-hmac-secret";
+
+      window.ChasterWidget.init({
+        gatewayUrl: "http://127.0.0.1:8010",
+        tenantId,
+        appId,
+        mode: "anonymous",
+        guestId,
+        getSignatureHeaders: async ({ tenantId, appId, message }) => {
+          const timestamp = Math.floor(Date.now() / 1000).toString();
+          const nonce = crypto.randomUUID();
+          const toSign = `${tenantId}:${appId}:${timestamp}:${nonce}:${message}`;
+          const signature = await hmacHex(hmacSecret, toSign);
+          return { signature, timestamp, nonce };
+        }
+      });
+    </script>
+  </body>
+</html>
