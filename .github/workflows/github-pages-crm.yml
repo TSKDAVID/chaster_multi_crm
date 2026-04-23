@@ -32,7 +32,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: atomic-crm/package-lock.json
 
       - uses: actions/configure-pages@v5
 
