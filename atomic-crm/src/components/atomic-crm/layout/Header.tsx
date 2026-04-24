@@ -156,13 +156,6 @@ const Header = () => {
                     />
                   ) : null}
                   <NavigationTab
-                    label={translate("resources.contacts.name", {
-                      smart_count: 2,
-                    })}
-                    to="/contacts"
-                    isActive={currentPath === "/contacts"}
-                  />
-                  <NavigationTab
                     label={translate("resources.companies.name", {
                       smart_count: 2,
                     })}
@@ -217,6 +210,7 @@ const Header = () => {
                 <RefreshButton />
                 <UserMenu>
                   <ProfileMenu />
+                  <ContactsMenu />
                   <CanAccess resource="sales" action="list">
                     <UsersMenu />
                   </CanAccess>
@@ -374,6 +368,22 @@ const ProfileMenu = () => {
       <Link to="/profile" className="flex items-center gap-2">
         <User />
         {translate("crm.profile.title")}
+      </Link>
+    </DropdownMenuItem>
+  );
+};
+
+const ContactsMenu = () => {
+  const translate = useTranslate();
+  const userMenuContext = useUserMenu();
+  if (!userMenuContext) {
+    throw new Error("<ContactsMenu> must be used inside <UserMenu>");
+  }
+  return (
+    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+      <Link to="/contacts" className="flex items-center gap-2">
+        <Users />
+        {translate("resources.contacts.name", { smart_count: 2 })}
       </Link>
     </DropdownMenuItem>
   );
