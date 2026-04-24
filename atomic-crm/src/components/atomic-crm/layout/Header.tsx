@@ -162,13 +162,6 @@ const Header = () => {
                     to="/companies"
                     isActive={currentPath === "/companies"}
                   />
-                  <NavigationTab
-                    label={translate("resources.deals.name", {
-                      smart_count: 2,
-                    })}
-                    to="/deals"
-                    isActive={currentPath === "/deals"}
-                  />
                   {isOwnerSide && can("hq.messages.view") ? (
                     <NavigationTab
                       label={translate("chaster.messages.client_conversations")}
@@ -211,6 +204,7 @@ const Header = () => {
                 <UserMenu>
                   <ProfileMenu />
                   <ContactsMenu />
+                  <DealsMenu />
                   <CanAccess resource="sales" action="list">
                     <UsersMenu />
                   </CanAccess>
@@ -384,6 +378,22 @@ const ContactsMenu = () => {
       <Link to="/contacts" className="flex items-center gap-2">
         <Users />
         {translate("resources.contacts.name", { smart_count: 2 })}
+      </Link>
+    </DropdownMenuItem>
+  );
+};
+
+const DealsMenu = () => {
+  const translate = useTranslate();
+  const userMenuContext = useUserMenu();
+  if (!userMenuContext) {
+    throw new Error("<DealsMenu> must be used inside <UserMenu>");
+  }
+  return (
+    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+      <Link to="/deals" className="flex items-center gap-2">
+        <User />
+        {translate("resources.deals.name", { smart_count: 2 })}
       </Link>
     </DropdownMenuItem>
   );
