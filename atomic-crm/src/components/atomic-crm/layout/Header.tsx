@@ -170,6 +170,13 @@ const Header = () => {
                       badge={hqMessagingUnread.data ?? 0}
                     />
                   ) : null}
+                  {isOwnerSide ? (
+                    <NavigationTab
+                      label={translate("chaster.hq.menu_platform_team")}
+                      to="/hq/platform-team"
+                      isActive={Boolean(matchPath("/hq/platform-team", path))}
+                    />
+                  ) : null}
                   {isOwnerSide && can("hq.support.cases.read") ? (
                     <NavigationTab
                       label={translate("chaster.hq.support.cases_title")}
