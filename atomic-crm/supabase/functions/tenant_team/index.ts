@@ -6,16 +6,38 @@ import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { inviteRedirectTo } from "../_shared/inviteRedirect.ts";
 
-type TenantRole = "super_admin" | "admin" | "member";
+type WorkspaceRole =
+  | "workspace_owner"
+  | "workspace_admin"
+  | "workspace_manager"
+  | "workspace_member"
+  | "workspace_viewer";
 
-function normalizeRole(raw: string): TenantRole {
-  if (raw === "super_admin" || raw === "admin" || raw === "member") return raw;
-  return "member";
+function normalizeRole(raw: string): WorkspaceRole {
+  switch (raw) {
+    case "workspace_owner":
+      return "workspace_owner";
+    case "workspace_admin":
+      return "workspace_admin";
+    case "workspace_manager":
+      return "workspace_manager";
+    case "workspace_member":
+      return "workspace_member";
+    case "workspace_viewer":
+      return "workspace_viewer";
+    // legacy compatibility
+    case "super_admin":
+      return "workspace_owner";
+    case "admin":
+      return "workspace_admin";
+    default:
+      return "workspace_member";
+  }
 }
 
 async function getCallerTenantContext(
   userId: string,
-): Promise<{ tenant_id: string; role: TenantRole } | null> {
+): Promise<{ tenant_id: string; role: WorkspaceRole } | null> {
   const { data, error } = await supabaseAdmin
     .from("tenant_members")
     .select("tenant_id, role, joined_at")
@@ -57,7 +79,11 @@ async function inviteTenantMember(
   if (!ctx) {
     return createErrorResponse(403, "You are not a member of a client tenant.");
   }
-  if (ctx.role !== "admin" && ctx.role !== "super_admin") {
+  if (
+    ctx.role !== "workspace_admin" &&
+    ctx.role !== "workspace_owner" &&
+    ctx.role !== "workspace_manager"
+  ) {
     return createErrorResponse(403, "Only tenant admins can invite members.");
   }
 
@@ -69,15 +95,30 @@ async function inviteTenantMember(
 
   const fn = String(body.first_name ?? "").trim() || "Pending";
   const ln = String(body.last_name ?? "").trim() || "Pending";
-  let role = normalizeRole(String(body.role ?? "member"));
-  if (role === "super_admin") {
+  let role = normalizeRole(String(body.role ?? "workspace_member"));
+  if (role === "workspace_owner") {
+    return createErrorResponse(400, "Cannot invite a workspace owner directly.");
+  }
+  if (
+    ctx.role === "workspace_manager" &&
+    role !== "workspace_member" &&
+    role !== "workspace_viewer"
+  ) {
     return createErrorResponse(
-      400,
-      "Cannot invite a super admin. Use transfer super admin instead.",
+      403,
+      "Workspace managers can only assign member or viewer roles.",
     );
   }
-  if (ctx.role === "admin" && role !== "member" && role !== "admin") {
-    return createErrorResponse(403, "Admins can only assign member or admin roles.");
+  if (
+    ctx.role === "workspace_admin" &&
+    role !== "workspace_member" &&
+    role !== "workspace_manager" &&
+    role !== "workspace_viewer"
+  ) {
+    return createErrorResponse(
+      403,
+      "Workspace admins can only assign member/manager/viewer roles.",
+    );
   }
 
   const inviteData: Record<string, string> = {
@@ -131,6 +172,52 @@ async function inviteTenantMember(
   });
 }
 
+async function addExistingTenantMember(
+  user: User,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const ctx = await getCallerTenantContext(user.id);
+  if (!ctx) {
+    return createErrorResponse(403, "You are not a member of a client tenant.");
+  }
+  if (
+    ctx.role !== "workspace_admin" &&
+    ctx.role !== "workspace_owner" &&
+    ctx.role !== "workspace_manager"
+  ) {
+    return createErrorResponse(403, "Only workspace admins can add members.");
+  }
+  const targetUserId = typeof body.target_user_id === "string"
+    ? body.target_user_id.trim()
+    : "";
+  if (!targetUserId) return createErrorResponse(400, "target_user_id is required");
+  if (targetUserId === user.id) {
+    return createErrorResponse(400, "You are already a member.");
+  }
+
+  const role = normalizeRole(String(body.role ?? "workspace_member"));
+  if (role === "workspace_owner") {
+    return createErrorResponse(400, "Use ownership transfer for workspace owner.");
+  }
+
+  const { error: upsertErr } = await supabaseAdmin.from("tenant_members").upsert(
+    {
+      tenant_id: ctx.tenant_id,
+      user_id: targetUserId,
+      role,
+    },
+    { onConflict: "tenant_id,user_id" },
+  );
+  if (upsertErr) return createErrorResponse(500, upsertErr.message);
+
+  await audit(ctx.tenant_id, user.id, "tenant_member_added_existing", targetUserId, {
+    role,
+  });
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
 async function resendTenantInvite(
   user: User,
   body: Record<string, unknown>,
@@ -139,7 +226,11 @@ async function resendTenantInvite(
   if (!ctx) {
     return createErrorResponse(403, "You are not a member of a client tenant.");
   }
-  if (ctx.role !== "admin" && ctx.role !== "super_admin") {
+  if (
+    ctx.role !== "workspace_admin" &&
+    ctx.role !== "workspace_owner" &&
+    ctx.role !== "workspace_manager"
+  ) {
     return createErrorResponse(403, "Only tenant admins can resend invitations.");
   }
 
@@ -166,11 +257,15 @@ async function resendTenantInvite(
   }
 
   const role = normalizeRole(inv.role as string);
-  if (role === "super_admin") {
+  if (role === "workspace_owner") {
     return createErrorResponse(400, "Invalid invite role.");
   }
-  if (ctx.role === "admin" && role !== "member" && role !== "admin") {
-    return createErrorResponse(403, "Admins can only resend member or admin invites.");
+  if (
+    ctx.role === "workspace_manager" &&
+    role !== "workspace_member" &&
+    role !== "workspace_viewer"
+  ) {
+    return createErrorResponse(403, "Managers can only resend member/viewer invites.");
   }
 
   const inviteData: Record<string, string> = {
@@ -227,7 +322,11 @@ async function removeTenantMember(
   if (!ctx) {
     return createErrorResponse(403, "You are not a member of a client tenant.");
   }
-  if (ctx.role !== "admin" && ctx.role !== "super_admin") {
+  if (
+    ctx.role !== "workspace_admin" &&
+    ctx.role !== "workspace_owner" &&
+    ctx.role !== "workspace_manager"
+  ) {
     return createErrorResponse(403, "Only tenant admins can remove members.");
   }
 
@@ -254,16 +353,22 @@ async function removeTenantMember(
 
   const targetRole = normalizeRole(targetRow.role as string);
 
-  if (targetRole === "super_admin") {
+  if (targetRole === "workspace_owner") {
     return createErrorResponse(
       403,
-      "Remove the super admin by transferring the role to someone else first.",
+      "Remove the workspace owner by transferring ownership first.",
     );
   }
-  if (ctx.role === "admin" && targetRole !== "member") {
+  if (ctx.role === "workspace_admin" && targetRole === "workspace_admin") {
     return createErrorResponse(
       403,
-      "Admins can only remove members with the member role.",
+      "Workspace admins cannot remove another workspace admin.",
+    );
+  }
+  if (ctx.role === "workspace_manager" && targetRole !== "workspace_member") {
+    return createErrorResponse(
+      403,
+      "Managers can only remove workspace members.",
     );
   }
 
@@ -305,7 +410,11 @@ async function updateTenantMemberRole(
   if (!ctx) {
     return createErrorResponse(403, "You are not a member of a client tenant.");
   }
-  if (ctx.role !== "admin" && ctx.role !== "super_admin") {
+  if (
+    ctx.role !== "workspace_admin" &&
+    ctx.role !== "workspace_owner" &&
+    ctx.role !== "workspace_manager"
+  ) {
     return createErrorResponse(403, "Only tenant admins can change roles.");
   }
 
@@ -317,10 +426,10 @@ async function updateTenantMemberRole(
   }
 
   const newRole = normalizeRole(String(body.role ?? ""));
-  if (newRole === "super_admin") {
+  if (newRole === "workspace_owner") {
     return createErrorResponse(
       400,
-      "Use transfer super admin to assign super admin.",
+      "Use ownership transfer to assign workspace owner.",
     );
   }
 
@@ -337,36 +446,57 @@ async function updateTenantMemberRole(
 
   const targetRole = normalizeRole(targetRow.role as string);
 
-  if (targetId === user.id && ctx.role === "super_admin" && newRole !== "super_admin") {
+  if (
+    targetId === user.id &&
+    ctx.role === "workspace_owner" &&
+    newRole !== "workspace_owner"
+  ) {
     const { count } = await supabaseAdmin
       .from("tenant_members")
       .select("*", { count: "exact", head: true })
       .eq("tenant_id", ctx.tenant_id)
-      .eq("role", "super_admin");
+      .eq("role", "workspace_owner");
     if ((count ?? 0) <= 1) {
       return createErrorResponse(
         400,
-        "Transfer super admin to another user before changing your own role.",
+        "Transfer workspace owner before changing your own role.",
       );
     }
   }
 
-  if (ctx.role === "admin") {
-    if (targetRole === "super_admin" || targetRole === "admin") {
+  if (ctx.role === "workspace_admin") {
+    if (targetRole === "workspace_owner" || targetRole === "workspace_admin") {
       return createErrorResponse(
         403,
-        "Admins cannot change other admins or the super admin.",
+        "Workspace admins cannot change owner/admin roles.",
       );
     }
-    if (newRole !== "member" && newRole !== "admin") {
+    if (
+      newRole !== "workspace_member" &&
+      newRole !== "workspace_manager" &&
+      newRole !== "workspace_viewer"
+    ) {
       return createErrorResponse(403, "Invalid role.");
     }
   }
 
-  if (ctx.role === "super_admin" && targetRole === "super_admin" && targetId !== user.id) {
+  if (ctx.role === "workspace_manager") {
+    if (targetRole !== "workspace_member") {
+      return createErrorResponse(403, "Managers can only change workspace members.");
+    }
+    if (newRole !== "workspace_member" && newRole !== "workspace_viewer") {
+      return createErrorResponse(403, "Invalid role.");
+    }
+  }
+
+  if (
+    ctx.role === "workspace_owner" &&
+    targetRole === "workspace_owner" &&
+    targetId !== user.id
+  ) {
     return createErrorResponse(
       403,
-      "Use transfer super admin to replace the organization owner.",
+      "Use ownership transfer to replace the workspace owner.",
     );
   }
 
@@ -381,7 +511,10 @@ async function updateTenantMemberRole(
     return createErrorResponse(500, upErr.message);
   }
 
-  const crmAdmin = newRole === "admin" || newRole === "super_admin";
+  const crmAdmin =
+    newRole === "workspace_admin" ||
+    newRole === "workspace_owner" ||
+    newRole === "workspace_manager";
   await supabaseAdmin.from("sales").update({ administrator: crmAdmin }).eq(
     "user_id",
     targetId,
@@ -421,6 +554,8 @@ Deno.serve(async (req: Request) =>
         switch (action) {
           case "invite_tenant_member":
             return inviteTenantMember(user, body);
+          case "add_existing_tenant_member":
+            return addExistingTenantMember(user, body);
           case "resend_tenant_invite":
             return resendTenantInvite(user, body);
           case "remove_tenant_member":
@@ -430,7 +565,7 @@ Deno.serve(async (req: Request) =>
           default:
             return createErrorResponse(
               400,
-              "Unknown action. Use invite_tenant_member, resend_tenant_invite, remove_tenant_member, or update_tenant_member_role.",
+              "Unknown action. Use invite_tenant_member, add_existing_tenant_member, resend_tenant_invite, remove_tenant_member, or update_tenant_member_role.",
             );
         }
       }),

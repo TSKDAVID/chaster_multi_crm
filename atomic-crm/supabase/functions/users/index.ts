@@ -6,9 +6,19 @@ import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { getUserSale } from "../_shared/getUserSale.ts";
 import { inviteRedirectTo } from "../_shared/inviteRedirect.ts";
 
-function normalizeTenantMemberRole(raw: string): "super_admin" | "admin" | "member" {
-  if (raw === "super_admin" || raw === "admin" || raw === "member") return raw;
-  return "member";
+function normalizeTenantMemberRole(
+  raw: string,
+): "workspace_owner" | "workspace_admin" | "workspace_manager" | "workspace_member" | "workspace_viewer" {
+  if (
+    raw === "workspace_owner" ||
+    raw === "workspace_admin" ||
+    raw === "workspace_manager" ||
+    raw === "workspace_member" ||
+    raw === "workspace_viewer"
+  ) return raw;
+  if (raw === "super_admin") return "workspace_owner";
+  if (raw === "admin") return "workspace_admin";
+  return "workspace_member";
 }
 
 async function isChasterStaffUser(userId: string): Promise<boolean> {
@@ -220,7 +230,7 @@ async function inviteUser(body: InviteUserBody, currentUserSale: any) {
       if (!uuidRe.test(tid)) {
         return createErrorResponse(400, "tenant_id must be a valid UUID");
       }
-      const roleRaw = String(tenant_member_role ?? "member").trim();
+      const roleRaw = String(tenant_member_role ?? "workspace_member").trim();
       const role = normalizeTenantMemberRole(roleRaw);
       inviteData.provisioned_tenant_id = tid;
       inviteData.provisioned_tenant_role = role;
@@ -349,10 +359,10 @@ async function deleteUserBySalesId(
   currentUserSale: { user_id: string },
 ) {
   const role = await getChasterTeamRole(currentUserSale.user_id);
-  if (role !== "super_admin") {
+  if (role !== "hq_owner" && role !== "super_admin") {
     return createErrorResponse(
       403,
-      "Only Chaster team super admins can delete users. Ask a super admin to set your chaster_team.role to super_admin.",
+      "Only Chaster HQ owners can delete users.",
     );
   }
 

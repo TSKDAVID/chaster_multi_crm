@@ -44,7 +44,9 @@ import { uploadFileViaSignedPut } from "./kbUploadWithProgress";
 const KB_BUCKET = "knowledge-base";
 const KB_MAX_BYTES = 10 * 1024 * 1024;
 const CHASTER_BRAIN_API_BASE_URL =
-  import.meta.env.VITE_CHASTER_BRAIN_API_URL?.trim() || "http://127.0.0.1:8010";
+  import.meta.env.VITE_CHASTER_BRAIN_API_URL?.trim() ||
+  import.meta.env.VITE_API_BASE_URL?.trim() ||
+  "http://127.0.0.1:8010";
 const CHASTER_BRAIN_INDEX_TIMEOUT_MS = 45000;
 
 type KbRow = {

@@ -127,6 +127,22 @@ Recovery and invite emails open `https://<project>.supabase.co/auth/v1/verify?to
 
 See `doc/` for detailed guides and `AGENTS.md` for maintainer commands and architecture notes.
 
+### HQ vs workspace RBAC rollout checklist
+
+When deploying the HQ/workspace role split:
+
+1. Apply latest migrations (`npm run db:push`) so role normalization functions and role backfill run.
+2. Deploy edge functions that enforce new role model:
+   - `npx supabase functions deploy tenant_team`
+   - `npx supabase functions deploy hq_tenant_actions`
+   - `npx supabase functions deploy users`
+   - `npx supabase functions deploy hq_provision_tenant`
+   - `npx supabase functions deploy provision_tenant`
+3. Verify boundaries:
+   - HQ support roles can read support queues but cannot run company write actions.
+   - Workspace manager/admin can add workspace members, but cannot grant workspace owner directly.
+   - Existing legacy roles still resolve correctly through compatibility mapping.
+
 ## License
 
 Inherited from the upstream Atomic CRM stack; verify licenses of bundled dependencies for production use.

@@ -9,63 +9,122 @@
  * **Knowledge base:** clients add content in Portal (member+). HQ company detail
  * KB tab is read-only support. Delete KB rows / Storage objects: admin+ (RLS).
  */
-export type ChasterTeamRole = "staff" | "admin" | "super_admin";
-export type TenantMemberRole = "member" | "admin" | "super_admin";
+export type HqRole =
+  | "hq_owner"
+  | "hq_ops_admin"
+  | "hq_support_lead"
+  | "hq_support_agent"
+  | "hq_developer"
+  | "hq_analyst";
+export type WorkspaceRole =
+  | "workspace_owner"
+  | "workspace_admin"
+  | "workspace_manager"
+  | "workspace_member"
+  | "workspace_viewer";
 
 export type ChasterAccessSnapshot = {
   isOwnerSide: boolean;
-  chasterTeamRole: ChasterTeamRole | null;
+  chasterTeamRole: HqRole | null;
   tenantId: string | null;
-  tenantMemberRole: TenantMemberRole | null;
+  tenantMemberRole: WorkspaceRole | null;
 };
 
-function isChasterRole(
+export function normalizeHqRole(
   r: string | null | undefined,
-): r is ChasterTeamRole {
-  return r === "staff" || r === "admin" || r === "super_admin";
+): HqRole | null {
+  switch (r) {
+    case "hq_owner":
+      return "hq_owner";
+    case "hq_ops_admin":
+      return "hq_ops_admin";
+    case "hq_support_lead":
+      return "hq_support_lead";
+    case "hq_support_agent":
+      return "hq_support_agent";
+    case "hq_developer":
+      return "hq_developer";
+    case "hq_analyst":
+      return "hq_analyst";
+    // legacy compatibility
+    case "super_admin":
+      return "hq_owner";
+    case "admin":
+      return "hq_ops_admin";
+    case "staff":
+      return "hq_support_agent";
+    default:
+      return null;
+  }
 }
 
-function isTenantRole(
+export function normalizeWorkspaceRole(
   r: string | null | undefined,
-): r is TenantMemberRole {
-  return r === "member" || r === "admin" || r === "super_admin";
+): WorkspaceRole | null {
+  switch (r) {
+    case "workspace_owner":
+      return "workspace_owner";
+    case "workspace_admin":
+      return "workspace_admin";
+    case "workspace_manager":
+      return "workspace_manager";
+    case "workspace_member":
+      return "workspace_member";
+    case "workspace_viewer":
+      return "workspace_viewer";
+    // legacy compatibility
+    case "super_admin":
+      return "workspace_owner";
+    case "admin":
+      return "workspace_admin";
+    case "member":
+      return "workspace_member";
+    default:
+      return null;
+  }
 }
 
 function canPortalTenantPermission(
-  tenantMemberRole: TenantMemberRole | null,
+  tenantMemberRole: WorkspaceRole | null,
   permission: string,
 ): boolean {
-  const tr = isTenantRole(tenantMemberRole) ? tenantMemberRole : "member";
+  const tr = normalizeWorkspaceRole(tenantMemberRole) ?? "workspace_member";
 
   switch (permission) {
     case "portal.view":
       return true;
     case "portal.subscription":
     case "portal.company.delete":
-      return tr === "super_admin";
+      return tr === "workspace_owner";
     case "portal.team.invite":
+    case "workspace.members.view_directory":
+    case "workspace.members.invite_email":
     case "portal.team.remove_member":
     case "portal.team.role_update":
     case "portal.settings.widget":
     case "portal.tenant_settings":
-      return tr === "admin" || tr === "super_admin";
+      return (
+        tr === "workspace_admin" ||
+        tr === "workspace_owner" ||
+        tr === "workspace_manager"
+      );
     case "portal.kb.upload":
-      return tr === "member" || tr === "admin" || tr === "super_admin";
+      return tr !== "workspace_viewer";
     case "portal.kb.delete":
-      return tr === "admin" || tr === "super_admin";
+      return tr === "workspace_admin" || tr === "workspace_owner";
     case "portal.team.promote":
-      return tr === "super_admin";
+      return tr === "workspace_owner";
     case "portal.messages.view":
     case "portal.messages.send":
     case "portal.messages.delete_own":
-      return tr === "member" || tr === "admin" || tr === "super_admin";
+      return tr !== "workspace_viewer";
     case "portal.messages.delete_any":
-      return tr === "admin" || tr === "super_admin";
+      return tr === "workspace_admin" || tr === "workspace_owner";
     case "portal.messages.hq_thread":
-      return tr === "super_admin";
+      return tr === "workspace_owner";
     case "portal.support.view":
     case "portal.support.create":
-      return tr === "member" || tr === "admin" || tr === "super_admin";
+      return tr !== "workspace_viewer";
     default:
       return false;
   }
@@ -80,27 +139,39 @@ export function canPermission(
   }
 
   if (ctx.isOwnerSide) {
-    const r = isChasterRole(ctx.chasterTeamRole)
-      ? ctx.chasterTeamRole
-      : "staff";
+    const r = normalizeHqRole(ctx.chasterTeamRole) ?? "hq_support_agent";
     switch (permission) {
       case "hq.view":
       case "hq.companies.read":
         return true;
       case "hq.companies.write":
       case "hq.provision":
-        return r === "admin" || r === "super_admin";
+        return r === "hq_owner" || r === "hq_ops_admin";
       case "hq.team.manage":
       case "crm.users.delete":
-        return r === "super_admin";
+        return r === "hq_owner";
       case "hq.messages.view":
       case "hq.messages.send":
-        return r === "staff" || r === "admin" || r === "super_admin";
+        return (
+          r === "hq_owner" ||
+          r === "hq_ops_admin" ||
+          r === "hq_support_lead" ||
+          r === "hq_support_agent"
+        );
       case "hq.support.cases.read":
-        return r === "staff" || r === "admin" || r === "super_admin";
+        return (
+          r === "hq_owner" ||
+          r === "hq_ops_admin" ||
+          r === "hq_support_lead" ||
+          r === "hq_support_agent"
+        );
       case "hq.support.cases.manage":
       case "hq.support.faqs.manage":
-        return r === "admin" || r === "super_admin";
+        return (
+          r === "hq_owner" ||
+          r === "hq_ops_admin" ||
+          r === "hq_support_lead"
+        );
       case "crm.use":
         return true;
       default:

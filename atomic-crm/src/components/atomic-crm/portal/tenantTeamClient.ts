@@ -2,6 +2,7 @@ import { getSupabaseClient } from "../providers/supabase/supabase";
 
 export type TenantTeamAction =
   | "invite_tenant_member"
+  | "add_existing_tenant_member"
   | "resend_tenant_invite"
   | "remove_tenant_member"
   | "update_tenant_member_role";

@@ -59,10 +59,27 @@ type SaleRow = {
   email: string | null;
 };
 
-type PlatformRole = "staff" | "admin" | "super_admin";
+type PlatformRole =
+  | "hq_owner"
+  | "hq_ops_admin"
+  | "hq_support_lead"
+  | "hq_support_agent"
+  | "hq_developer"
+  | "hq_analyst";
 
 function isPlatformRole(r: string): r is PlatformRole {
-  return r === "staff" || r === "admin" || r === "super_admin";
+  return (
+    r === "hq_owner" ||
+    r === "hq_ops_admin" ||
+    r === "hq_support_lead" ||
+    r === "hq_support_agent" ||
+    r === "hq_developer" ||
+    r === "hq_analyst" ||
+    // backward compatibility for existing rows
+    r === "staff" ||
+    r === "admin" ||
+    r === "super_admin"
+  );
 }
 
 export function HqPlatformTeamPage() {
@@ -82,7 +99,7 @@ function HqPlatformTeamPageInner() {
   const canManage = can("hq.team.manage");
   const [addOpen, setAddOpen] = useState(false);
   const [pickUserId, setPickUserId] = useState<string | null>(null);
-  const [pickRole, setPickRole] = useState<PlatformRole>("staff");
+  const [pickRole, setPickRole] = useState<PlatformRole>("hq_support_agent");
 
   const teamQuery = useQuery({
     queryKey: ["hq-chaster-platform-team"],
@@ -210,7 +227,7 @@ function HqPlatformTeamPageInner() {
     onSuccess: async () => {
       setAddOpen(false);
       setPickUserId(null);
-      setPickRole("staff");
+      setPickRole("hq_support_agent");
       await queryClient.invalidateQueries({ queryKey: ["hq-chaster-platform-team"] });
       await queryClient.invalidateQueries({
         queryKey: ["hq-chaster-platform-team-candidates"],
@@ -300,7 +317,7 @@ function HqPlatformTeamPageInner() {
                       "—"
                     : translate("chaster.hq.platform_team_no_profile");
                   const email = sale?.email ?? "—";
-                  const role = isPlatformRole(row.role) ? row.role : "staff";
+                  const role = normalizePlatformRole(row.role);
                   const isSelf = authUserId === row.user_id;
 
                   return (
@@ -324,17 +341,22 @@ function HqPlatformTeamPageInner() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="staff">
+                              <SelectItem value="hq_support_agent">
                                 {translate("chaster.hq.platform_team_role_staff")}
                               </SelectItem>
-                              <SelectItem value="admin">
+                              <SelectItem value="hq_support_lead">
+                                Support lead
+                              </SelectItem>
+                              <SelectItem value="hq_ops_admin">
                                 {translate("chaster.hq.platform_team_role_admin")}
                               </SelectItem>
-                              <SelectItem value="super_admin">
+                              <SelectItem value="hq_owner">
                                 {translate(
                                   "chaster.hq.platform_team_role_super_admin",
                                 )}
                               </SelectItem>
+                              <SelectItem value="hq_developer">Developer</SelectItem>
+                              <SelectItem value="hq_analyst">Analyst</SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -458,15 +480,20 @@ function HqPlatformTeamPageInner() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="staff">
+                  <SelectItem value="hq_support_agent">
                     {translate("chaster.hq.platform_team_role_staff")}
                   </SelectItem>
-                  <SelectItem value="admin">
+                  <SelectItem value="hq_support_lead">
+                    Support lead
+                  </SelectItem>
+                  <SelectItem value="hq_ops_admin">
                     {translate("chaster.hq.platform_team_role_admin")}
                   </SelectItem>
-                  <SelectItem value="super_admin">
+                  <SelectItem value="hq_owner">
                     {translate("chaster.hq.platform_team_role_super_admin")}
                   </SelectItem>
+                  <SelectItem value="hq_developer">Developer</SelectItem>
+                  <SelectItem value="hq_analyst">Analyst</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -497,11 +524,42 @@ function roleLabel(
   translate: (key: string) => string,
 ): string {
   switch (role) {
-    case "super_admin":
+    case "hq_owner":
       return translate("chaster.hq.platform_team_role_super_admin");
-    case "admin":
+    case "hq_ops_admin":
       return translate("chaster.hq.platform_team_role_admin");
-    default:
+    case "hq_support_lead":
+      return "Support lead";
+    case "hq_developer":
+      return "Developer";
+    case "hq_analyst":
+      return "Analyst";
+    case "hq_support_agent":
       return translate("chaster.hq.platform_team_role_staff");
+    default:
+      return role;
+  }
+}
+
+function normalizePlatformRole(role: string): PlatformRole {
+  switch (role) {
+    case "hq_owner":
+      return "hq_owner";
+    case "hq_ops_admin":
+      return "hq_ops_admin";
+    case "hq_support_lead":
+      return "hq_support_lead";
+    case "hq_support_agent":
+      return "hq_support_agent";
+    case "hq_developer":
+      return "hq_developer";
+    case "hq_analyst":
+      return "hq_analyst";
+    case "super_admin":
+      return "hq_owner";
+    case "admin":
+      return "hq_ops_admin";
+    default:
+      return "hq_support_agent";
   }
 }

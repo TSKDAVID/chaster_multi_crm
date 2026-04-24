@@ -161,7 +161,7 @@ Deno.serve(async (req: Request) =>
           {
             tenant_id: tenant.id,
             user_id: auth_user_id,
-            role: crm_module_enabled ? "super_admin" : "member",
+            role: crm_module_enabled ? "workspace_owner" : "workspace_member",
           },
           { onConflict: "tenant_id,user_id" },
         );
@@ -187,7 +187,7 @@ Deno.serve(async (req: Request) =>
             first_name,
             last_name,
             provisioned_tenant_id: tenant.id,
-            provisioned_tenant_role: "super_admin",
+            provisioned_tenant_role: "workspace_owner",
           },
           ...(redirectTo ? { redirectTo } : {}),
         });

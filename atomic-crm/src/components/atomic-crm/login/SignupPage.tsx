@@ -33,56 +33,12 @@ export const SignupPage = () => {
     },
   });
 
-  // #region agent log
-  fetch("http://127.0.0.1:7612/ingest/62869ee2-e612-4032-a187-2f1d717a20f6", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "935e5d",
-    },
-    body: JSON.stringify({
-      sessionId: "935e5d",
-      runId: "signup-routing",
-      hypothesisId: "H1_H3",
-      location: "SignupPage.tsx:render",
-      message: "Signup page state",
-      data: {
-        isPending,
-        isInitialized: Boolean(isInitialized),
-        pathname: window.location.pathname,
-        hash: window.location.hash,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   const { isPending: isSignUpPending, mutate } = useMutation({
     mutationKey: ["signup"],
     mutationFn: async (data: SignUpData) => {
       return dataProvider.signUp(data);
     },
     onSuccess: (data) => {
-      // #region agent log
-      fetch("http://127.0.0.1:7612/ingest/62869ee2-e612-4032-a187-2f1d717a20f6", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "935e5d",
-        },
-        body: JSON.stringify({
-          sessionId: "935e5d",
-          runId: "signup-submit",
-          hypothesisId: "H4",
-          location: "SignupPage.tsx:onSuccess",
-          message: "Signup mutation success",
-          data: {
-            hasEmail: Boolean(data.email),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       login({
         email: data.email,
         password: data.password,
@@ -115,26 +71,6 @@ export const SignupPage = () => {
         });
     },
     onError: (error) => {
-      // #region agent log
-      fetch("http://127.0.0.1:7612/ingest/62869ee2-e612-4032-a187-2f1d717a20f6", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "935e5d",
-        },
-        body: JSON.stringify({
-          sessionId: "935e5d",
-          runId: "signup-submit",
-          hypothesisId: "H4",
-          location: "SignupPage.tsx:onError",
-          message: "Signup mutation error",
-          data: {
-            errorMessage: error.message,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       notify(error.message);
     },
   });

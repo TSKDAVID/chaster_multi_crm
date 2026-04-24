@@ -12,6 +12,8 @@ import { getSupabaseClient } from "../providers/supabase/supabase";
 import {
   canPermission,
   type ChasterAccessSnapshot,
+  normalizeHqRole,
+  normalizeWorkspaceRole,
 } from "./permissions";
 
 export type ChasterAccessContextValue = ChasterAccessSnapshot & {
@@ -49,8 +51,7 @@ async function fetchChasterAccess(userId: string): Promise<ChasterAccessSnapshot
       .eq("user_id", userId)
       .maybeSingle();
     const rr = row?.role;
-    chasterTeamRole =
-      rr === "staff" || rr === "admin" || rr === "super_admin" ? rr : "staff";
+    chasterTeamRole = normalizeHqRole(rr) ?? "hq_support_agent";
   }
 
   const { data: tenantIdRaw, error: tidErr } =
@@ -67,9 +68,7 @@ async function fetchChasterAccess(userId: string): Promise<ChasterAccessSnapshot
       .eq("tenant_id", tenantId)
       .eq("user_id", userId)
       .maybeSingle();
-    const tr = tm?.role;
-    tenantMemberRole =
-      tr === "member" || tr === "admin" || tr === "super_admin" ? tr : null;
+    tenantMemberRole = normalizeWorkspaceRole(tm?.role);
   }
 
   return {

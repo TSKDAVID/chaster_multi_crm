@@ -125,29 +125,6 @@ export const getAuthProvider = (): AuthProvider => {
         hash.includes("#/checkout/test") ||
         hash.includes("#/checkout/test/success");
 
-      // #region agent log
-      fetch("http://127.0.0.1:7612/ingest/62869ee2-e612-4032-a187-2f1d717a20f6", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "935e5d",
-        },
-        body: JSON.stringify({
-          sessionId: "935e5d",
-          runId: "check-auth",
-          hypothesisId: "H2_H5",
-          location: "authProvider.ts:checkAuth:entry",
-          message: "checkAuth path classification",
-          data: {
-            pathname,
-            hash,
-            isPublicCheckoutPath,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-
       if (isPublicCheckoutPath) {
         return;
       }
@@ -200,27 +177,6 @@ export const getAuthProvider = (): AuthProvider => {
       }
 
       const isInitialized = await getIsInitialized();
-
-      // #region agent log
-      fetch("http://127.0.0.1:7612/ingest/62869ee2-e612-4032-a187-2f1d717a20f6", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "935e5d",
-        },
-        body: JSON.stringify({
-          sessionId: "935e5d",
-          runId: "check-auth",
-          hypothesisId: "H1",
-          location: "authProvider.ts:checkAuth:postInit",
-          message: "checkAuth init state",
-          data: {
-            isInitialized,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
 
       if (!isInitialized) {
         await getSupabaseClient().auth.signOut();

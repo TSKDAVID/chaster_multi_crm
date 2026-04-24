@@ -60,7 +60,12 @@ type SaleRow = {
   email: string;
 };
 
-type TenantRole = "super_admin" | "admin" | "member";
+type WorkspaceRole =
+  | "workspace_owner"
+  | "workspace_admin"
+  | "workspace_manager"
+  | "workspace_member"
+  | "workspace_viewer";
 
 type PendingInviteRow = {
   id: string;
@@ -69,9 +74,25 @@ type PendingInviteRow = {
   created_at: string;
 };
 
-function normRole(r: string): TenantRole {
-  if (r === "super_admin" || r === "admin" || r === "member") return r;
-  return "member";
+function normRole(r: string): WorkspaceRole {
+  switch (r) {
+    case "workspace_owner":
+      return "workspace_owner";
+    case "workspace_admin":
+      return "workspace_admin";
+    case "workspace_manager":
+      return "workspace_manager";
+    case "workspace_member":
+      return "workspace_member";
+    case "workspace_viewer":
+      return "workspace_viewer";
+    case "super_admin":
+      return "workspace_owner";
+    case "admin":
+      return "workspace_admin";
+    default:
+      return "workspace_member";
+  }
 }
 
 export function PortalTeamPageContent({
@@ -87,13 +108,16 @@ export function PortalTeamPageContent({
   const myId = authUserId ?? "";
   const { tenantId } = useChasterAccess();
   const { can, tenantMemberRole, refetch: refetchAccess } = useCurrentUserRole();
-  const myTenantRole = normRole(tenantMemberRole ?? "member");
+  const myTenantRole = normRole(tenantMemberRole ?? "workspace_member");
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFirst, setInviteFirst] = useState("");
   const [inviteLast, setInviteLast] = useState("");
-  const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
+  const [inviteRole, setInviteRole] = useState<
+    "workspace_member" | "workspace_manager" | "workspace_admin"
+  >("workspace_member");
+  const [existingUserId, setExistingUserId] = useState("");
   const [inviteSending, setInviteSending] = useState(false);
 
   const [removeTarget, setRemoveTarget] = useState<MemberRow | null>(null);
@@ -157,6 +181,24 @@ export function PortalTeamPageContent({
     },
   });
 
+  const { data: directoryCandidates = [] } = useQuery({
+    queryKey: ["workspace-directory-candidates", tenantId],
+    enabled: !!tenantId && can("workspace.members.view_directory"),
+    queryFn: async (): Promise<SaleRow[]> => {
+      const supabase = getSupabaseClient();
+      const memberSet = new Set(members.map((m) => m.user_id));
+      const { data, error } = await supabase
+        .from("sales")
+        .select("user_id, first_name, last_name, email")
+        .not("user_id", "is", null)
+        .order("email", { ascending: true });
+      if (error) throw error;
+      return ((data ?? []) as SaleRow[]).filter(
+        (row) => row.user_id && !memberSet.has(row.user_id),
+      );
+    },
+  });
+
   const invalidateTeam = () => {
     void queryClient.invalidateQueries({ queryKey: ["portal-team-members", tenantId] });
     void queryClient.invalidateQueries({ queryKey: ["portal-team-sales"] });
@@ -180,7 +222,29 @@ export function PortalTeamPageContent({
       setInviteEmail("");
       setInviteFirst("");
       setInviteLast("");
-      setInviteRole("member");
+      setInviteRole("workspace_member");
+      setExistingUserId("");
+      invalidateTeam();
+    } catch (e) {
+      console.error(e);
+      notify((e as Error).message, { type: "error" });
+    } finally {
+      setInviteSending(false);
+    }
+  };
+
+  const submitAddExisting = async () => {
+    if (!existingUserId) return;
+    setInviteSending(true);
+    try {
+      await invokeTenantTeam("add_existing_tenant_member", {
+        target_user_id: existingUserId,
+        role: inviteRole,
+      });
+      notify("Member added to workspace", { type: "success" });
+      setInviteOpen(false);
+      setExistingUserId("");
+      setInviteRole("workspace_member");
       invalidateTeam();
     } catch (e) {
       console.error(e);
@@ -208,7 +272,10 @@ export function PortalTeamPageContent({
     }
   };
 
-  const updateRole = async (target: MemberRow, role: "member" | "admin") => {
+  const updateRole = async (
+    target: MemberRow,
+    role: "workspace_member" | "workspace_manager" | "workspace_admin",
+  ) => {
     try {
       await invokeTenantTeam("update_tenant_member_role", {
         target_user_id: target.user_id,
@@ -292,15 +359,16 @@ export function PortalTeamPageContent({
   };
 
   const transferCandidates = members.filter(
-    (m) => m.user_id !== myId && normRole(m.role) !== "super_admin",
+    (m) => m.user_id !== myId && normRole(m.role) !== "workspace_owner",
   );
 
   const canShowRoleSelect = (m: MemberRow) => {
     if (!can("portal.team.role_update")) return false;
     const tr = normRole(m.role);
-    if (tr === "super_admin") return false;
-    if (myTenantRole === "admin") return tr === "member";
-    if (myTenantRole === "super_admin") return true;
+    if (tr === "workspace_owner") return false;
+    if (myTenantRole === "workspace_admin") return tr === "workspace_member";
+    if (myTenantRole === "workspace_manager") return tr === "workspace_member";
+    if (myTenantRole === "workspace_owner") return true;
     return false;
   };
 
@@ -308,9 +376,10 @@ export function PortalTeamPageContent({
     if (!can("portal.team.remove_member")) return false;
     if (m.user_id === myId) return false;
     const tr = normRole(m.role);
-    if (tr === "super_admin") return false;
-    if (myTenantRole === "admin") return tr === "member";
-    if (myTenantRole === "super_admin") return true;
+    if (tr === "workspace_owner") return false;
+    if (myTenantRole === "workspace_admin") return tr === "workspace_member";
+    if (myTenantRole === "workspace_manager") return tr === "workspace_member";
+    if (myTenantRole === "workspace_owner") return true;
     return false;
   };
 
@@ -333,7 +402,7 @@ export function PortalTeamPageContent({
               </Button>
             </PermissionGate>
             <PermissionGate permission="portal.team.promote">
-              {myTenantRole === "super_admin" ? (
+              {myTenantRole === "workspace_owner" ? (
                 <Button
                   type="button"
                   size="sm"
@@ -476,9 +545,13 @@ export function PortalTeamPageContent({
                         <TableCell>
                           {canShowRoleSelect(m) ? (
                             <Select
-                              value={tr === "super_admin" ? "super_admin" : tr}
+                              value={tr}
                               onValueChange={(v) => {
-                                if (v === "member" || v === "admin") {
+                                if (
+                                  v === "workspace_member" ||
+                                  v === "workspace_manager" ||
+                                  v === "workspace_admin"
+                                ) {
                                   void updateRole(m, v);
                                 }
                               }}
@@ -487,10 +560,13 @@ export function PortalTeamPageContent({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="member">
+                                <SelectItem value="workspace_member">
                                   {translate("chaster.portal.team_role_member")}
                                 </SelectItem>
-                                <SelectItem value="admin">
+                                <SelectItem value="workspace_manager">
+                                  Workspace manager
+                                </SelectItem>
+                                <SelectItem value="workspace_admin">
                                   {translate("chaster.portal.team_role_admin")}
                                 </SelectItem>
                               </SelectContent>
@@ -560,21 +636,51 @@ export function PortalTeamPageContent({
                 <Select
                   value={inviteRole}
                   onValueChange={(v) =>
-                    setInviteRole(v === "admin" ? "admin" : "member")
+                    setInviteRole(
+                      v === "workspace_admin"
+                        ? "workspace_admin"
+                        : v === "workspace_manager"
+                          ? "workspace_manager"
+                          : "workspace_member",
+                    )
                   }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="member">
+                    <SelectItem value="workspace_member">
                       {translate("chaster.portal.team_role_member")}
                     </SelectItem>
-                    <SelectItem value="admin">
+                    <SelectItem value="workspace_manager">
+                      Workspace manager
+                    </SelectItem>
+                    <SelectItem value="workspace_admin">
                       {translate("chaster.portal.team_role_admin")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Add existing platform member</Label>
+                <Select value={existingUserId} onValueChange={setExistingUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select from platform directory" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {directoryCandidates.map((s) => (
+                      <SelectItem key={s.user_id} value={s.user_id}>
+                        {(s.email ?? s.user_id) +
+                          (s.first_name || s.last_name
+                            ? ` (${[s.first_name, s.last_name].filter(Boolean).join(" ")})`
+                            : "")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Choose existing people from platform directory or invite by email above.
+                </p>
               </div>
             </div>
             <DialogFooter>
@@ -589,6 +695,14 @@ export function PortalTeamPageContent({
                 {inviteSending
                   ? translate("chaster.portal.team_invite_sending")
                   : translate("chaster.portal.team_invite_send")}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={inviteSending || !existingUserId}
+                onClick={() => void submitAddExisting()}
+              >
+                Add existing member
               </Button>
             </DialogFooter>
           </DialogContent>

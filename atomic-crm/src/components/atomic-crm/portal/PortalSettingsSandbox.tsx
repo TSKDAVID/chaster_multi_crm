@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 
 type Msg = { id: string; role: "user" | "assistant"; text: string };
 const CHASTER_BRAIN_API_BASE_URL =
-  import.meta.env.VITE_CHASTER_BRAIN_API_URL?.trim() || "http://127.0.0.1:8010";
+  import.meta.env.VITE_CHASTER_BRAIN_API_URL?.trim() ||
+  import.meta.env.VITE_API_BASE_URL?.trim() ||
+  "http://127.0.0.1:8010";
 
 export function PortalSettingsSandbox() {
   const translate = useTranslate();

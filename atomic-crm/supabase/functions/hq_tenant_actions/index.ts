@@ -25,10 +25,16 @@ Deno.serve(async (req: Request) =>
         return createErrorResponse(403, "Chaster team access required");
       }
       const staffRole = staff.role as string;
-      if (staffRole !== "admin" && staffRole !== "super_admin") {
+      const isAllowedHqRole =
+        staffRole === "hq_owner" ||
+        staffRole === "hq_ops_admin" ||
+        staffRole === "hq_support_lead" ||
+        staffRole === "admin" ||
+        staffRole === "super_admin";
+      if (!isAllowedHqRole) {
         return createErrorResponse(
           403,
-          "Chaster admin or super admin required for this action",
+          "HQ owner/ops/support lead required for this action",
         );
       }
 
