@@ -235,9 +235,183 @@ export function HqDashboardPage() {
   }, [rows]);
 
   const loading = statsLoading || dirLoading;
+  const companyHealthCard = (
+    <Card>
+      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>{translate("chaster.hq.company_health_title")}</CardTitle>
+          <CardDescription className="space-y-2">
+            <span className="block">{translate("chaster.hq.company_health_desc")}</span>
+            <span className="block text-xs">
+              {translate("chaster.hq.hint_tenants_vs_companies")}
+            </span>
+          </CardDescription>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm">
+            <Link to="/hq/companies/new" className="inline-flex items-center gap-1">
+              <Plus className="h-4 w-4" />
+              {translate("chaster.hq.add_company")}
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!sortedRows.length}
+            onClick={() => {
+              exportTenantsCsv(
+                sortedRows,
+                `chaster-tenants-${new Date().toISOString().slice(0, 10)}.csv`,
+              );
+              notify(translate("chaster.hq.export_done"), { type: "success" });
+            }}
+          >
+            <Download className="h-4 w-4 mr-1" />
+            {translate("chaster.hq.export_csv")}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{translate("chaster.hq.col_company")}</TableHead>
+              <TableHead>{translate("chaster.hq.col_status")}</TableHead>
+              <TableHead>{translate("chaster.hq.col_tier")}</TableHead>
+              <TableHead>{translate("chaster.hq.col_admin_email")}</TableHead>
+              <TableHead>{translate("chaster.hq.col_trial")}</TableHead>
+              <TableHead>{translate("chaster.hq.col_activity")}</TableHead>
+              <TableHead className="w-[140px]">
+                {translate("chaster.hq.col_health")}
+              </TableHead>
+              <TableHead className="text-right min-w-[280px]">
+                {translate("chaster.hq.col_actions")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedRows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  {translate("chaster.hq.no_tenants")}
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedRows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-medium">
+                    {row.company_name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusBadgeVariant(row.status)}>
+                      {row.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{row.subscription_tier}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                    {row.primary_contact_email ?? "—"}
+                  </TableCell>
+                  <TableCell
+                    className={
+                      trialUrgent(row.trial_ends_at)
+                        ? "text-destructive font-medium"
+                        : ""
+                    }
+                  >
+                    {row.trial_ends_at
+                      ? new Date(row.trial_ends_at).toLocaleDateString()
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                    {new Date(row.last_activity_at).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all",
+                            healthBarClass(row.health_score),
+                          )}
+                          style={{ width: `${row.health_score}%` }}
+                        />
+                      </div>
+                      <span className="text-xs tabular-nums w-8">
+                        {row.health_score}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to={`/hq/companies/${row.id}`}>
+                          {translate("chaster.hq.action_view")}
+                        </Link>
+                      </Button>
+                      <PermissionGate permission="hq.companies.write">
+                        {row.owner_user_id ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            title={translate("chaster.hq.action_reset_primary_hint")}
+                            disabled={
+                              primaryResetKey ===
+                              `${row.id}:${row.owner_user_id}`
+                            }
+                            onClick={() =>
+                              void sendPrimaryAdminPasswordReset(row)
+                            }
+                          >
+                            <KeyRound className="h-3.5 w-3.5" />
+                            {translate("chaster.hq.action_reset_primary")}
+                          </Button>
+                        ) : null}
+                        {row.status === "suspended" ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setStatusDialog({
+                                kind: "reactivate",
+                                row,
+                                targetStatus:
+                                  defaultReactivateTargetStatus(row),
+                              })
+                            }
+                          >
+                            {translate("chaster.hq.action_reactivate")}
+                          </Button>
+                        ) : row.status !== "churned" ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                            onClick={() =>
+                              setStatusDialog({ kind: "suspend", row })
+                            }
+                          >
+                            {translate("chaster.hq.action_suspend")}
+                          </Button>
+                        ) : null}
+                      </PermissionGate>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <div className="max-w-screen-xl mx-auto p-6 space-y-8">
+    <div className="max-w-screen-xl mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Building2 className="h-7 w-7" />
@@ -255,6 +429,8 @@ export function HqDashboardPage() {
         </div>
       ) : (
         <>
+          {companyHealthCard}
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               label={translate("chaster.hq.stat_tenants")}
@@ -385,179 +561,6 @@ export function HqDashboardPage() {
                   {translate("chaster.hq.card_people_workspace_team")}
                 </Link>
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>{translate("chaster.hq.company_health_title")}</CardTitle>
-                <CardDescription className="space-y-2">
-                  <span className="block">{translate("chaster.hq.company_health_desc")}</span>
-                  <span className="block text-xs">
-                    {translate("chaster.hq.hint_tenants_vs_companies")}
-                  </span>
-                </CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button asChild size="sm">
-                  <Link to="/hq/companies/new" className="inline-flex items-center gap-1">
-                    <Plus className="h-4 w-4" />
-                    {translate("chaster.hq.add_company")}
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!sortedRows.length}
-                  onClick={() => {
-                    exportTenantsCsv(
-                      sortedRows,
-                      `chaster-tenants-${new Date().toISOString().slice(0, 10)}.csv`,
-                    );
-                    notify(translate("chaster.hq.export_done"), { type: "success" });
-                  }}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  {translate("chaster.hq.export_csv")}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{translate("chaster.hq.col_company")}</TableHead>
-                    <TableHead>{translate("chaster.hq.col_status")}</TableHead>
-                    <TableHead>{translate("chaster.hq.col_tier")}</TableHead>
-                    <TableHead>{translate("chaster.hq.col_admin_email")}</TableHead>
-                    <TableHead>{translate("chaster.hq.col_trial")}</TableHead>
-                    <TableHead>{translate("chaster.hq.col_activity")}</TableHead>
-                    <TableHead className="w-[140px]">
-                      {translate("chaster.hq.col_health")}
-                    </TableHead>
-                    <TableHead className="text-right min-w-[280px]">
-                      {translate("chaster.hq.col_actions")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        {translate("chaster.hq.no_tenants")}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sortedRows.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="font-medium">
-                          {row.company_name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusBadgeVariant(row.status)}>
-                            {row.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{row.subscription_tier}</TableCell>
-                        <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                          {row.primary_contact_email ?? "—"}
-                        </TableCell>
-                        <TableCell
-                          className={
-                            trialUrgent(row.trial_ends_at)
-                              ? "text-destructive font-medium"
-                              : ""
-                          }
-                        >
-                          {row.trial_ends_at
-                            ? new Date(row.trial_ends_at).toLocaleDateString()
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                          {new Date(row.last_activity_at).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className={cn(
-                                  "h-full transition-all",
-                                  healthBarClass(row.health_score),
-                                )}
-                                style={{ width: `${row.health_score}%` }}
-                              />
-                            </div>
-                            <span className="text-xs tabular-nums w-8">
-                              {row.health_score}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex flex-wrap justify-end gap-1">
-                            <Button asChild variant="ghost" size="sm">
-                              <Link to={`/hq/companies/${row.id}`}>
-                                {translate("chaster.hq.action_view")}
-                              </Link>
-                            </Button>
-                            <PermissionGate permission="hq.companies.write">
-                              {row.owner_user_id ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-1"
-                                  title={translate("chaster.hq.action_reset_primary_hint")}
-                                  disabled={
-                                    primaryResetKey ===
-                                    `${row.id}:${row.owner_user_id}`
-                                  }
-                                  onClick={() =>
-                                    void sendPrimaryAdminPasswordReset(row)
-                                  }
-                                >
-                                  <KeyRound className="h-3.5 w-3.5" />
-                                  {translate("chaster.hq.action_reset_primary")}
-                                </Button>
-                              ) : null}
-                              {row.status === "suspended" ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    setStatusDialog({
-                                      kind: "reactivate",
-                                      row,
-                                      targetStatus:
-                                        defaultReactivateTargetStatus(row),
-                                    })
-                                  }
-                                >
-                                  {translate("chaster.hq.action_reactivate")}
-                                </Button>
-                              ) : row.status !== "churned" ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                                  onClick={() =>
-                                    setStatusDialog({ kind: "suspend", row })
-                                  }
-                                >
-                                  {translate("chaster.hq.action_suspend")}
-                                </Button>
-                              ) : null}
-                            </PermissionGate>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
             </CardContent>
           </Card>
 
