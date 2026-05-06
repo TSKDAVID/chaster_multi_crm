@@ -196,9 +196,16 @@ export function PortalKnowledgeBasePageContent({
       fileName: string;
       content: string;
     }) => {
+      const {
+        data: { session },
+      } = await getSupabaseClient().auth.getSession();
+      const accessToken = session?.access_token;
       const res = await fetchJsonWithTimeout(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/index`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           tenant_id: tenantId,
           source_type: "text",
@@ -232,9 +239,16 @@ export function PortalKnowledgeBasePageContent({
       userId: string;
       documentId: string;
     }) => {
+      const {
+        data: { session },
+      } = await getSupabaseClient().auth.getSession();
+      const accessToken = session?.access_token;
       const res = await fetchJsonWithTimeout(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/index`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           tenant_id: tenantId,
           source_type: "document",

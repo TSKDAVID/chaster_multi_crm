@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useTranslate } from "ra-core";
 import { useChasterAccess } from "../access/chasterAccessContext";
+import { getSupabaseClient } from "../providers/supabase/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -30,9 +31,16 @@ export function PortalSettingsSandbox() {
     setMessages((m) => [...m, userMsg]);
     setPending(true);
     try {
+      const {
+        data: { session },
+      } = await getSupabaseClient().auth.getSession();
+      const accessToken = session?.access_token;
       const res = await fetch(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/sandbox/message`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({ tenant_id: tenantId, message: text }),
       });
       const payload = (await res.json().catch(() => ({}))) as
