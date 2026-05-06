@@ -8,7 +8,7 @@ type Msg = { id: string; role: "user" | "assistant"; text: string };
 const CHASTER_BRAIN_API_BASE_URL =
   import.meta.env.VITE_CHASTER_BRAIN_API_URL?.trim() ||
   import.meta.env.VITE_API_BASE_URL?.trim() ||
-  "http://127.0.0.1:8010";
+  "https://brain-vd2l.onrender.com";
 
 export function PortalSettingsSandbox() {
   const translate = useTranslate();
