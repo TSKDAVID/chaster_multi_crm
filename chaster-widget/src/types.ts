@@ -27,6 +27,8 @@ export interface HandshakeRequest {
   guest_id?: string;
   guest_name?: string;
   guest_email?: string;
+  conversation_id?: string;
+  previous_session_token?: string;
 }
 
 export interface HandshakeResponse {
@@ -39,6 +41,19 @@ export interface HandshakeResponse {
   conversation_id?: string;
   support_case_id?: string;
   ai_handling: boolean;
+  resumed?: boolean;
+}
+
+export interface RemoteMessage {
+  id?: string;
+  role: "user" | "ai";
+  body: string;
+  created_at?: string;
+}
+
+export interface RemoteMessagesResponse {
+  conversation_id: string | null;
+  messages: RemoteMessage[];
 }
 
 export interface ProcessResponse {

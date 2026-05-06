@@ -71,6 +71,18 @@ export const widgetStyles = `
   margin-top: 3px;
 }
 
+.chaster-header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.chaster-reset {
+  background: rgba(255, 255, 255, 0.18) !important;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
 .chaster-messages {
   display: flex;
   flex-direction: column;
