@@ -200,11 +200,17 @@ export function PortalKnowledgeBasePageContent({
         data: { session },
       } = await getSupabaseClient().auth.getSession();
       const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error(
+          "Debug: no Supabase access token in browser session during text indexing.",
+        );
+      }
       const res = await fetchJsonWithTimeout(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/index`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          Authorization: `Bearer ${accessToken}`,
+          "X-Client-Debug": "portal-kb-text-v2",
         },
         body: JSON.stringify({
           tenant_id: tenantId,
@@ -222,7 +228,9 @@ export function PortalKnowledgeBasePageContent({
         | Record<string, unknown>;
       if (!res.ok) {
         throw new Error(
-          payload.detail || payload.message || "Failed to index uploaded text document.",
+          `Index text failed (${res.status}): ${
+            payload.detail || payload.message || "Unknown backend error."
+          }`,
         );
       }
     },
@@ -243,11 +251,17 @@ export function PortalKnowledgeBasePageContent({
         data: { session },
       } = await getSupabaseClient().auth.getSession();
       const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error(
+          "Debug: no Supabase access token in browser session during document indexing.",
+        );
+      }
       const res = await fetchJsonWithTimeout(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/index`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          Authorization: `Bearer ${accessToken}`,
+          "X-Client-Debug": "portal-kb-doc-v2",
         },
         body: JSON.stringify({
           tenant_id: tenantId,
@@ -261,7 +275,11 @@ export function PortalKnowledgeBasePageContent({
         | { detail?: string; message?: string }
         | Record<string, unknown>;
       if (!res.ok) {
-        throw new Error(payload.detail || payload.message || "Failed to index uploaded document.");
+        throw new Error(
+          `Index document failed (${res.status}): ${
+            payload.detail || payload.message || "Unknown backend error."
+          }`,
+        );
       }
     },
     [],

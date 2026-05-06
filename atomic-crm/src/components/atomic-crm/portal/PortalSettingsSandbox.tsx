@@ -35,11 +35,17 @@ export function PortalSettingsSandbox() {
         data: { session },
       } = await getSupabaseClient().auth.getSession();
       const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error(
+          "Debug: no Supabase access token in browser session. Please sign out/in and retry.",
+        );
+      }
       const res = await fetch(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/sandbox/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          Authorization: `Bearer ${accessToken}`,
+          "X-Client-Debug": "portal-sandbox-v2",
         },
         body: JSON.stringify({ tenant_id: tenantId, message: text }),
       });
@@ -48,7 +54,9 @@ export function PortalSettingsSandbox() {
         | Record<string, unknown>;
       if (!res.ok) {
         throw new Error(
-          payload.detail || "Sandbox request failed. Ensure Chaster Brain is running.",
+          `Sandbox request failed (${res.status}): ${
+            payload.detail || "Ensure Chaster Brain is running and CORS/auth are correct."
+          }`,
         );
       }
       setMessages((m) => [
