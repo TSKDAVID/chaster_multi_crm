@@ -1140,13 +1140,14 @@ export const frenchCrmMessages = {
       settings_embed_copy_error: "Impossible de copier dans le presse-papiers",
       settings_sandbox_heading: "Bac à sable",
       settings_sandbox_desc:
-        "Testez la mise en page du chat. Les réponses sont simulées tant que la base de connaissances n'est pas indexée pour l'IA.",
-      settings_sandbox_empty: "Envoyez un message pour voir la réponse factice.",
+        "Testez l’assistant avec les paramètres Brain actifs. Les messages restent dans ce navigateur jusqu’à une nouvelle discussion.",
+      settings_sandbox_empty: "Envoyez un message pour voir la réponse de l’assistant.",
       settings_sandbox_placeholder: "Saisir un message de test…",
       settings_sandbox_input_label: "Message bac à sable",
       settings_sandbox_send: "Envoyer",
+      settings_sandbox_new_chat: "Nouvelle discussion",
       settings_sandbox_mock_reply:
-        "Les tests IA seront disponibles une fois votre base de connaissances indexée.",
+        "Aucun texte de réponse. Vérifiez que l’API Brain répond et que la base de connaissances est indexée.",
       settings_save: "Enregistrer",
       settings_saving: "Enregistrement…",
       settings_saved: "Paramètres enregistrés",

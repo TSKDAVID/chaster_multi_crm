@@ -1123,13 +1123,14 @@ export const englishCrmMessages = {
       settings_embed_copy_error: "Could not copy to clipboard",
       settings_sandbox_heading: "Sandbox tester",
       settings_sandbox_desc:
-        "Exercise the chat layout. Replies are mocked until your knowledge base is indexed for AI.",
-      settings_sandbox_empty: "Send a message to see the mock assistant reply.",
+        "Try the assistant against your live brain settings. Messages stay in this browser until you start a new chat.",
+      settings_sandbox_empty: "Send a message to see the assistant reply.",
       settings_sandbox_placeholder: "Type a test message…",
       settings_sandbox_input_label: "Sandbox message",
       settings_sandbox_send: "Send",
+      settings_sandbox_new_chat: "New chat",
       settings_sandbox_mock_reply:
-        "AI testing will be available once your knowledge base is indexed.",
+        "No reply text was returned. Check that the brain API is running and your knowledge base is indexed.",
       settings_save: "Save",
       settings_saving: "Saving…",
       settings_saved: "Settings saved",

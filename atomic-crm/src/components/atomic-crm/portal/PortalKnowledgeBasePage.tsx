@@ -202,7 +202,7 @@ export function PortalKnowledgeBasePageContent({
       const accessToken = session?.access_token;
       if (!accessToken) {
         throw new Error(
-          "Debug: no Supabase access token in browser session during text indexing.",
+          "Your session has no access token. Sign out and sign in again, then retry indexing.",
         );
       }
       const res = await fetchJsonWithTimeout(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/index`, {
@@ -210,7 +210,6 @@ export function PortalKnowledgeBasePageContent({
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
-          "X-Client-Debug": "portal-kb-text-v2",
         },
         body: JSON.stringify({
           tenant_id: tenantId,
@@ -253,7 +252,7 @@ export function PortalKnowledgeBasePageContent({
       const accessToken = session?.access_token;
       if (!accessToken) {
         throw new Error(
-          "Debug: no Supabase access token in browser session during document indexing.",
+          "Your session has no access token. Sign out and sign in again, then retry indexing.",
         );
       }
       const res = await fetchJsonWithTimeout(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/index`, {
@@ -261,7 +260,6 @@ export function PortalKnowledgeBasePageContent({
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
-          "X-Client-Debug": "portal-kb-doc-v2",
         },
         body: JSON.stringify({
           tenant_id: tenantId,

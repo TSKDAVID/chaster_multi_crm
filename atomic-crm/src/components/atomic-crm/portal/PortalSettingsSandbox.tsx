@@ -1,11 +1,16 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslate } from "ra-core";
 import { useChasterAccess } from "../access/chasterAccessContext";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  clearSandboxMessages,
+  loadSandboxMessages,
+  saveSandboxMessages,
+  type SandboxMsg,
+} from "./portalSandboxStorage";
 
-type Msg = { id: string; role: "user" | "assistant"; text: string };
 const CHASTER_BRAIN_API_BASE_URL =
   import.meta.env.VITE_CHASTER_BRAIN_API_URL?.trim() ||
   import.meta.env.VITE_API_BASE_URL?.trim() ||
@@ -14,16 +19,38 @@ const CHASTER_BRAIN_API_BASE_URL =
 export function PortalSettingsSandbox() {
   const translate = useTranslate();
   const { tenantId } = useChasterAccess();
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<SandboxMsg[]>([]);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setMessages([]);
+      hydratedRef.current = true;
+      return;
+    }
+    setMessages(loadSandboxMessages(tenantId));
+    hydratedRef.current = true;
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId || !hydratedRef.current) return;
+    saveSandboxMessages(tenantId, messages);
+  }, [tenantId, messages]);
+
+  const clearChat = useCallback(() => {
+    if (!tenantId) return;
+    clearSandboxMessages(tenantId);
+    setMessages([]);
+  }, [tenantId]);
 
   const send = useCallback(async () => {
     const text = draft.trim();
     if (!text || pending || !tenantId) return;
     setDraft("");
-    const userMsg: Msg = {
+    const userMsg: SandboxMsg = {
       id: `u-${Date.now()}`,
       role: "user",
       text,
@@ -37,7 +64,7 @@ export function PortalSettingsSandbox() {
       const accessToken = session?.access_token;
       if (!accessToken) {
         throw new Error(
-          "Debug: no Supabase access token in browser session. Please sign out/in and retry.",
+          "Your session has no access token. Sign out and sign in again, then retry the sandbox.",
         );
       }
       const res = await fetch(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/sandbox/message`, {
@@ -45,7 +72,6 @@ export function PortalSettingsSandbox() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
-          "X-Client-Debug": "portal-sandbox-v2",
         },
         body: JSON.stringify({ tenant_id: tenantId, message: text }),
       });
@@ -55,7 +81,9 @@ export function PortalSettingsSandbox() {
       if (!res.ok) {
         throw new Error(
           `Sandbox request failed (${res.status}): ${
-            payload.detail || "Ensure Chaster Brain is running and CORS/auth are correct."
+            typeof payload.detail === "string"
+              ? payload.detail
+              : "Check that the brain API is reachable and CORS allows this origin."
           }`,
         );
       }
@@ -94,6 +122,11 @@ export function PortalSettingsSandbox() {
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 min-h-[220px]">
+      <div className="flex items-center justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" disabled={!tenantId} onClick={clearChat}>
+          {translate("chaster.portal.settings_sandbox_new_chat")}
+        </Button>
+      </div>
       <div
         ref={listRef}
         className="flex-1 space-y-2 max-h-[200px] overflow-y-auto text-sm pr-1"
