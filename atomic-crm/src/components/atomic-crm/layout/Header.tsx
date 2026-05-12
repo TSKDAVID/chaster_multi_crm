@@ -121,8 +121,8 @@ const Header = () => {
 
   return (
     <>
-      <nav className="grow">
-        <header className="bg-secondary">
+      <nav className="sticky top-0 z-50 w-full shrink-0 border-b border-black/10 bg-secondary/95 shadow-sm backdrop-blur-md dark:border-white/10">
+        <header className="bg-transparent">
           <div className="px-4">
             <div className="flex justify-between items-center flex-1">
               <Link

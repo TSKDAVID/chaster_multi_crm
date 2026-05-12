@@ -176,6 +176,7 @@ export const createDataProvider = ({
           withSupabaseFilterAdapter(baseDataProvider),
           filter.company_id,
           filter.sales_id,
+          filter.tenant_id,
         );
         const { page, perPage } = pagination;
         const start = (page - 1) * perPage;

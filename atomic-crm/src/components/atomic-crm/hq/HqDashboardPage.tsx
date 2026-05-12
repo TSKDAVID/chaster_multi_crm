@@ -468,7 +468,7 @@ export function HqDashboardPage() {
                     <Link to="/companies">{translate("chaster.hq.crm_workspace_link_companies")}</Link>
                   </Button>
                 </div>
-                <Dashboard />
+                <Dashboard tenantScopeId={tenantId} />
               </CardContent>
             </Card>
           ) : (

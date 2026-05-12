@@ -128,22 +128,40 @@ export function MessageBubble({
           {hover && !deleted && !failed ? (
             <div
               className={cn(
-                "absolute -top-8 flex gap-1 rounded-md border bg-background shadow-sm p-0.5 z-10",
+                "absolute -top-8 flex gap-0.5 rounded-md border border-border bg-popover p-0.5 z-10 shadow-md ring-1 ring-border/60",
                 isOwn ? "right-0" : "left-0",
               )}
             >
               {onReply ? (
-                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onReply}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-7 w-7 text-foreground border border-border bg-card hover:bg-muted"
+                  onClick={onReply}
+                >
                   <Reply className="h-3.5 w-3.5" />
                 </Button>
               ) : null}
               {isOwn && onEdit ? (
-                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-7 w-7 text-foreground border border-border bg-card hover:bg-muted"
+                  onClick={onEdit}
+                >
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
               ) : null}
               {(isOwn || canDeleteAny) && onDelete ? (
-                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-7 w-7 text-foreground border border-border bg-card hover:bg-muted"
+                  onClick={onDelete}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               ) : null}

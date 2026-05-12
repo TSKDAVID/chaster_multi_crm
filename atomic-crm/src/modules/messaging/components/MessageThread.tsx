@@ -67,6 +67,7 @@ export function MessageThread({
     hasMoreOlder,
     prependOptimistic,
     replaceOptimisticId,
+    registerIncomingMessageId,
     markFailed,
     markSending,
   } = useMessages(conversationId);
@@ -135,6 +136,7 @@ export function MessageThread({
       });
       return;
     }
+    registerIncomingMessageId(data.id);
     const { data: full, error: fetchErr } = await getSupabaseClient()
       .from("messages")
       .select(
@@ -176,6 +178,7 @@ export function MessageThread({
       });
       return;
     }
+    registerIncomingMessageId(data.id);
     const { data: full } = await getSupabaseClient()
       .from("messages")
       .select(

@@ -32,9 +32,11 @@ import { TaskFormContent } from "./TaskFormContent";
 export const AddTask = ({
   selectContact,
   display = "chip",
+  tenantScopeId,
 }: {
   selectContact?: boolean;
   display?: "chip" | "icon";
+  tenantScopeId?: string;
 }) => {
   const { identity } = useGetIdentity();
   const dataProvider = useDataProvider();
@@ -107,6 +109,7 @@ export const AddTask = ({
           contact_id: contact?.id,
           due_date: new Date().toISOString(),
           sales_id: identity.id,
+          ...(tenantScopeId ? { tenant_id: tenantScopeId } : {}),
         }}
         mutationOptions={{ onSuccess: handleSuccess }}
       >
@@ -122,7 +125,12 @@ export const AddTask = ({
                     : translate("resources.tasks.dialog.create")}
                 </DialogTitle>
               </DialogHeader>
-              <TaskFormContent selectContact={selectContact} />
+              <TaskFormContent
+                selectContact={selectContact}
+                contactAutocompleteFilter={
+                  tenantScopeId ? { tenant_id: tenantScopeId } : undefined
+                }
+              />
               <DialogFooter className="w-full justify-end">
                 <SaveButton />
               </DialogFooter>

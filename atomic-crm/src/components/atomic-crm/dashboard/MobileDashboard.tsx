@@ -1,6 +1,8 @@
 import { useGetList, useTimeout } from "ra-core";
+import { useLocation } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { useChasterAccess } from "../access/chasterAccessContext";
 import type { Contact, ContactNote } from "../types";
 import { DashboardActivityLog } from "./DashboardActivityLog";
 import { DashboardStepper } from "./DashboardStepper";
@@ -44,16 +46,30 @@ const Loading = () => (
 );
 
 export const MobileDashboard = () => {
+  const { pathname } = useLocation();
+  const { tenantId } = useChasterAccess();
+  const tenantScopeId =
+    tenantId &&
+    (pathname === "/portal" || pathname.startsWith("/portal/"))
+      ? tenantId
+      : undefined;
+  const tenantFilter =
+    tenantScopeId != null && tenantScopeId !== ""
+      ? { tenant_id: tenantScopeId }
+      : {};
+
   const {
     data: dataContact,
     total: totalContact,
     isPending: isPendingContact,
   } = useGetList<Contact>("contacts", {
     pagination: { page: 1, perPage: 1 },
+    filter: tenantFilter,
   });
   const { total: totalContactNotes, isPending: isPendingContactNotes } =
     useGetList<ContactNote>("contact_notes", {
       pagination: { page: 1, perPage: 1 },
+      filter: tenantFilter,
     });
   const oneSecondHasPassed = useTimeout(1000);
 
@@ -83,7 +99,7 @@ export const MobileDashboard = () => {
     <Wrapper>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-1">
         {import.meta.env.VITE_IS_DEMO === "true" ? <Welcome /> : null}
-        <DashboardActivityLog />
+        <DashboardActivityLog tenantScopeId={tenantScopeId} />
       </div>
     </Wrapper>
   );

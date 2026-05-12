@@ -22,16 +22,19 @@ import {
 
 export const TasksListByDueDate = ({
   filterByContact,
+  tenantScopeId,
   emptyPlaceholder,
   pendingPlaceholder,
 }: {
   filterByContact?: Identifier;
+  tenantScopeId?: string;
   emptyPlaceholder?: React.ReactNode;
   pendingPlaceholder?: React.ReactNode;
 }) => {
   const { identity } = useGetIdentity();
   const isMobile = useIsMobile();
   const translate = useTranslate();
+  const tenantScoped = !!tenantScopeId;
 
   const { data: tasks, isPending } = useGetList(
     "tasks",
@@ -41,10 +44,15 @@ export const TasksListByDueDate = ({
       filter: {
         ...(filterByContact != null
           ? { contact_id: filterByContact }
-          : { sales_id: identity?.id }),
+          : tenantScoped
+            ? { tenant_id: tenantScopeId! }
+            : { sales_id: identity?.id }),
       },
     },
-    { enabled: filterByContact != null ? true : !!identity },
+    {
+      enabled:
+        filterByContact != null ? true : tenantScoped ? true : !!identity,
+    },
   );
 
   const showContact = filterByContact == null;

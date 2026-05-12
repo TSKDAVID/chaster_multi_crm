@@ -16,6 +16,15 @@ export type MessageRow = {
 
 const PAGE = 50;
 
+function dedupeMessagesById(rows: MessageRow[]): MessageRow[] {
+  const byId = new Map<string, MessageRow>();
+  for (const m of rows) byId.set(m.id, m);
+  return [...byId.values()].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+}
+
 export function useMessages(conversationId: string | null) {
   const qc = useQueryClient();
   const [olderLoading, setOlderLoading] = useState(false);
@@ -66,12 +75,7 @@ export function useMessages(conversationId: string | null) {
       for (const m of batch) seenIds.current.add(m.id);
       qc.setQueryData<MessageRow[]>(["messaging-messages", conversationId], (prev) => {
         if (!prev) return batch;
-        const merged = [...batch, ...prev];
-        const dedup = new Map<string, MessageRow>();
-        for (const m of merged) dedup.set(m.id, m);
-        return [...dedup.values()].sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        );
+        return dedupeMessagesById([...batch, ...prev]);
       });
     } finally {
       setOlderLoading(false);
@@ -98,9 +102,16 @@ export function useMessages(conversationId: string | null) {
           qc.setQueryData<MessageRow[]>(["messaging-messages", conversationId], (prev) => {
             if (!prev) return [row];
             if (prev.some((m) => m.id === row.id)) return prev;
-            return [...prev, row].sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+            const stripped = prev.filter(
+              (m) =>
+                !(
+                  m._local === "sending" &&
+                  m.sender_id === row.sender_id &&
+                  m.body === row.body &&
+                  m.conversation_id === row.conversation_id,
+                ),
             );
+            return dedupeMessagesById([...stripped, row]);
           });
         },
       )
@@ -116,7 +127,7 @@ export function useMessages(conversationId: string | null) {
           const row = payload.new as MessageRow;
           qc.setQueryData<MessageRow[]>(["messaging-messages", conversationId], (prev) => {
             if (!prev) return prev;
-            return prev.map((m) => (m.id === row.id ? { ...m, ...row } : m));
+            return dedupeMessagesById(prev.map((m) => (m.id === row.id ? { ...m, ...row } : m)));
           });
         },
       )
@@ -146,10 +157,18 @@ export function useMessages(conversationId: string | null) {
       const cleaned = { ...real, _local: undefined };
       qc.setQueryData<MessageRow[]>(["messaging-messages", conversationId], (prev) => {
         if (!prev) return [cleaned];
-        return prev.map((m) => (m.id === tempId ? cleaned : m));
+        return dedupeMessagesById(prev.map((m) => (m.id === tempId ? cleaned : m)));
       });
     },
     [conversationId, qc],
+  );
+
+  /** Call as soon as the server assigns an id (before fetch) so realtime INSERT does not duplicate rows. */
+  const registerIncomingMessageId = useCallback(
+    (messageId: string) => {
+      seenIds.current.add(messageId);
+    },
+    [],
   );
 
   const markFailed = useCallback(
@@ -187,6 +206,7 @@ export function useMessages(conversationId: string | null) {
     refetch: q.refetch,
     prependOptimistic,
     replaceOptimisticId,
+    registerIncomingMessageId,
     markFailed,
     markSending,
   };

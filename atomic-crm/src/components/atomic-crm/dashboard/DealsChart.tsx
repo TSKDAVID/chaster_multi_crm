@@ -21,7 +21,11 @@ const threeMonthsAgo = new Date(
 
 const DEFAULT_LOCALE = "en-US";
 
-export const DealsChart = memo(() => {
+export const DealsChart = memo(function DealsChart({
+  tenantScopeId,
+}: {
+  tenantScopeId?: string;
+}) {
   const translate = useTranslate();
   const { dealStages, currency } = useConfigurationContext();
   const acceptedLanguages = navigator
@@ -38,6 +42,7 @@ export const DealsChart = memo(() => {
     },
     filter: {
       "created_at@gte": threeMonthsAgo,
+      ...(tenantScopeId ? { tenant_id: tenantScopeId } : {}),
     },
   });
   const months = useMemo(() => {

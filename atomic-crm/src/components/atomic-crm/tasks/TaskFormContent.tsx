@@ -10,8 +10,11 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 
 export const TaskFormContent = ({
   selectContact,
+  contactAutocompleteFilter,
 }: {
   selectContact?: boolean;
+  /** Extra filter for contact picker (e.g. tenant-scoped dashboard). */
+  contactAutocompleteFilter?: Record<string, unknown>;
 }) => {
   const { taskTypes } = useConfigurationContext();
   return (
@@ -25,7 +28,11 @@ export const TaskFormContent = ({
         helperText={false}
       />
       {selectContact && (
-        <ReferenceInput source="contact_id" reference="contacts_summary">
+        <ReferenceInput
+          source="contact_id"
+          reference="contacts_summary"
+          filter={contactAutocompleteFilter}
+        >
           <AutocompleteInput
             label="resources.tasks.fields.contact_id"
             optionText={contactOptionText}

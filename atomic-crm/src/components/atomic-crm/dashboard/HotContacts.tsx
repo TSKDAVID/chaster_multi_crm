@@ -14,9 +14,18 @@ import { SimpleList } from "../simple-list/SimpleList";
 import { Avatar } from "../contacts/Avatar";
 import type { Contact } from "../types";
 
-export const HotContacts = () => {
+export const HotContacts = ({
+  tenantScopeId,
+}: {
+  tenantScopeId?: string;
+}) => {
   const { identity } = useGetIdentity();
   const translate = useTranslate();
+  const tenantScoped = !!tenantScopeId;
+  const filter = tenantScoped
+    ? { status: "hot" as const, tenant_id: tenantScopeId! }
+    : { status: "hot" as const, sales_id: identity?.id };
+
   const {
     data: contactData,
     total: contactTotal,
@@ -26,9 +35,11 @@ export const HotContacts = () => {
     {
       pagination: { page: 1, perPage: 10 },
       sort: { field: "last_seen", order: "DESC" },
-      filter: { status: "hot", sales_id: identity?.id },
+      filter,
     },
-    { enabled: Number.isInteger(identity?.id) },
+    {
+      enabled: tenantScoped || Number.isInteger(identity?.id),
+    },
   );
 
   return (

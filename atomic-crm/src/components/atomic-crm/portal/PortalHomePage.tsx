@@ -350,7 +350,9 @@ export function PortalHomePage() {
           </Button>
         </div>
 
-        <Dashboard />
+        {tenantId ? (
+          <Dashboard tenantScopeId={tenantId} />
+        ) : null}
       </div>
     </TenantPortalGuard>
   );

@@ -5,7 +5,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { ActivityLog } from "../activity/ActivityLog";
 
-export function DashboardActivityLog() {
+export function DashboardActivityLog({
+  tenantScopeId,
+}: {
+  tenantScopeId?: string;
+}) {
   const isMobile = useIsMobile();
   const translate = useTranslate();
   return (
@@ -21,10 +25,10 @@ export function DashboardActivityLog() {
         </h2>
       </div>
       {isMobile ? (
-        <ActivityLog pageSize={10} />
+        <ActivityLog pageSize={10} tenantId={tenantScopeId} />
       ) : (
         <Card className="mb-2 p-6">
-          <ActivityLog pageSize={10} />
+          <ActivityLog pageSize={10} tenantId={tenantScopeId} />
         </Card>
       )}
     </div>

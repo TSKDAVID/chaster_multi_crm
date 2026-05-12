@@ -22,6 +22,7 @@ export async function getActivityLog(
   dataProvider: DataProvider,
   companyId?: Identifier,
   salesId?: Identifier,
+  tenantId?: Identifier,
 ) {
   const companyFilter = {} as any;
   if (companyId) {
@@ -29,12 +30,18 @@ export async function getActivityLog(
   } else if (salesId) {
     companyFilter["sales_id@in"] = `(${salesId})`;
   }
+  if (tenantId) {
+    companyFilter.tenant_id = tenantId;
+  }
 
   const filter = {} as any;
   if (companyId) {
     filter.company_id = companyId;
   } else if (salesId) {
     filter["sales_id@in"] = `(${salesId})`;
+  }
+  if (tenantId) {
+    filter.tenant_id = tenantId;
   }
 
   const [newCompanies, newContactsAndNotes, newDealsAndNotes] =

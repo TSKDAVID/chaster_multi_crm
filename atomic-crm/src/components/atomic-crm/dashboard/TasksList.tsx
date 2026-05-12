@@ -5,7 +5,11 @@ import { Card } from "@/components/ui/card";
 import { AddTask } from "../tasks/AddTask";
 import { TasksListContent } from "../tasks/TasksListContent";
 
-export const TasksList = () => {
+export const TasksList = ({
+  tenantScopeId,
+}: {
+  tenantScopeId?: string;
+}) => {
   const translate = useTranslate();
   return (
     <div className="flex flex-col gap-2">
@@ -18,10 +22,10 @@ export const TasksList = () => {
             _: "Upcoming Tasks",
           })}
         </h2>
-        <AddTask display="icon" selectContact />
+        <AddTask display="icon" selectContact tenantScopeId={tenantScopeId} />
       </div>
       <Card className="p-4 mb-2">
-        <TasksListContent />
+        <TasksListContent tenantScopeId={tenantScopeId} />
       </Card>
     </div>
   );
