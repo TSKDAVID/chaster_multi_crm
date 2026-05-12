@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslate } from "ra-core";
+import { Navigate } from "react-router";
 import { useCurrentUserRole } from "./useCurrentUserRole";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +15,7 @@ export function TenantPortalGuard({ children }: { children: ReactNode }) {
   const translate = useTranslate();
   const { data: moduleFlags, isPending: moduleFlagsPending } = useQuery({
     queryKey: ["tenant-portal-guard-module-flags", tenantId],
-    enabled: !!tenantId && !isLoading,
+    enabled: !!tenantId && !isLoading && !isOwnerSide,
     queryFn: async () => {
       const { data, error } = await getSupabaseClient()
         .from("tenant_settings")
@@ -26,7 +27,7 @@ export function TenantPortalGuard({ children }: { children: ReactNode }) {
     },
   });
 
-  if (isLoading || moduleFlagsPending) {
+  if (isLoading) {
     return (
       <div className="p-8 max-w-screen-xl mx-auto">
         <Skeleton className="h-8 w-64 mb-4" />
@@ -35,7 +36,21 @@ export function TenantPortalGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!tenantId && !isOwnerSide) {
+  /** Portal is for tenant users; HQ staff should use /hq (test with a separate login for portal QA). */
+  if (isOwnerSide) {
+    return <Navigate to="/hq" replace />;
+  }
+
+  if (moduleFlagsPending) {
+    return (
+      <div className="p-8 max-w-screen-xl mx-auto">
+        <Skeleton className="h-8 w-64 mb-4" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
+
+  if (!tenantId) {
     return (
       <div className="p-8 max-w-screen-xl mx-auto text-center">
         <p className="text-muted-foreground">
