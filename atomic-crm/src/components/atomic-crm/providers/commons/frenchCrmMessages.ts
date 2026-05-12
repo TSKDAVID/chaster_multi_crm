@@ -1016,6 +1016,28 @@ export const frenchCrmMessages = {
       nav_strip_title: "Pages du portail",
       nav_strip_hint:
         "Accédez à ces sections à tout moment. Sur ordinateur, les mêmes liens sont sous le menu principal.",
+      sandbox_open_hq: "Ouvrir le tableau de bord HQ (CRM réel)",
+      sandbox_banner_title: "Bac à sable du tableau de bord portail (HQ uniquement)",
+      sandbox_banner_body:
+        "Aucune donnée n’écrit dans le CRM du tenant. Contacts chauds, activité et tâches sont dans votre propre bac à sable jusqu’à réinitialisation.",
+      sandbox_seed: "Charger des exemples",
+      sandbox_reset: "Vider le bac à sable",
+      sandbox_empty_hot: "Pas encore de contacts « chauds » de test. Utilisez + ou les exemples.",
+      sandbox_empty_activity:
+        "Pas encore d’activité de test. Elle est isolée du CRM de production.",
+      sandbox_empty_tasks: "Pas encore de tâches de test.",
+      sandbox_add_activity: "Ajouter une activité",
+      sandbox_activity_hint:
+        "Pour tester la mise en page — pas les contacts ni les notes réels.",
+      sandbox_activity_placeholder: "Titre court",
+      sandbox_activity_detail_ph: "Note optionnelle",
+      sandbox_add_contact: "Ajouter un contact de test",
+      sandbox_contact_name_ph: "Nom complet",
+      sandbox_contact_sub_ph: "Sous-titre (poste · entreprise)",
+      sandbox_add_task: "Ajouter une tâche de test",
+      sandbox_task_text_ph: "Description de la tâche",
+      sandbox_remove_row: "Supprimer",
+      sandbox_task_due: "Pour le %{date}",
       kb_title: "Base de connaissances",
       kb_desc:
         "Téléversez des documents ou ajoutez des FAQ pour le contexte IA. Les admins peuvent gérer les entrées.",

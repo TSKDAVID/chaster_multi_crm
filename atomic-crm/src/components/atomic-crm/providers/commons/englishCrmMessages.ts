@@ -1000,6 +1000,28 @@ export const englishCrmMessages = {
       nav_strip_title: "Portal pages",
       nav_strip_hint:
         "Open these sections anytime. On desktop, the same links appear in a second row under the main menu.",
+      sandbox_open_hq: "Open HQ dashboard (real CRM)",
+      sandbox_banner_title: "Portal dashboard sandbox (HQ only)",
+      sandbox_banner_body:
+        "Nothing here touches tenant CRM rows. Hot contacts, activity, and tasks live in your own sandbox row until you reset them — use this to preview the portal layout safely.",
+      sandbox_seed: "Load sample rows",
+      sandbox_reset: "Clear sandbox",
+      sandbox_empty_hot: "No sandbox hot contacts yet. Use + or load samples.",
+      sandbox_empty_activity:
+        "No sandbox activity yet. Latest activity here is isolated from production CRM.",
+      sandbox_empty_tasks: "No sandbox tasks yet.",
+      sandbox_add_activity: "Add activity",
+      sandbox_activity_hint:
+        "One-line stories for layout testing — not written to contacts or notes.",
+      sandbox_activity_placeholder: "Short headline",
+      sandbox_activity_detail_ph: "Optional note body",
+      sandbox_add_contact: "Add sandbox contact",
+      sandbox_contact_name_ph: "Full name",
+      sandbox_contact_sub_ph: "Subtitle (job · company)",
+      sandbox_add_task: "Add sandbox task",
+      sandbox_task_text_ph: "Task description",
+      sandbox_remove_row: "Remove",
+      sandbox_task_due: "Due %{date}",
       kb_title: "Knowledge base",
       kb_desc:
         "Upload documents or add FAQs for your AI context. Admins can add or remove entries.",
