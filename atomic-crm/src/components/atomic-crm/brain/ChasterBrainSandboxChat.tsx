@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  clearSandboxConversationId,
   clearSandboxMessages,
+  loadSandboxConversationId,
   loadSandboxMessages,
+  saveSandboxConversationId,
   saveSandboxMessages,
   type SandboxMsg,
 } from "../portal/portalSandboxStorage";
@@ -22,6 +25,7 @@ type SandboxApiPayload = {
   intent?: string;
   confidence?: number;
   used_sources?: string[];
+  conversation_id?: string | null;
 };
 
 export type ChasterBrainSandboxChatProps = {
@@ -39,6 +43,7 @@ export function ChasterBrainSandboxChat({
 }: ChasterBrainSandboxChatProps) {
   const translate = useTranslate();
   const [messages, setMessages] = useState<SandboxMsg[]>([]);
+  const [serverConversationId, setServerConversationId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -47,10 +52,12 @@ export function ChasterBrainSandboxChat({
   useEffect(() => {
     if (!tenantId) {
       setMessages([]);
+      setServerConversationId(null);
       hydratedRef.current = true;
       return;
     }
     setMessages(loadSandboxMessages(tenantId, storageScope));
+    setServerConversationId(loadSandboxConversationId(tenantId, storageScope));
     hydratedRef.current = true;
   }, [tenantId, storageScope]);
 
@@ -59,11 +66,39 @@ export function ChasterBrainSandboxChat({
     saveSandboxMessages(tenantId, messages, storageScope);
   }, [tenantId, messages, storageScope]);
 
-  const clearChat = useCallback(() => {
+  useEffect(() => {
+    if (!tenantId || !hydratedRef.current) return;
+    if (serverConversationId) {
+      saveSandboxConversationId(tenantId, storageScope, serverConversationId);
+    }
+  }, [tenantId, storageScope, serverConversationId]);
+
+  const clearChat = useCallback(async () => {
     if (!tenantId) return;
+    const convId = serverConversationId;
+    try {
+      const {
+        data: { session },
+      } = await getSupabaseClient().auth.getSession();
+      const accessToken = session?.access_token;
+      if (accessToken && convId) {
+        await fetch(`${CHASTER_BRAIN_API_BASE_URL}/v1/control/sandbox/reset`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ tenant_id: tenantId, conversation_id: convId }),
+        });
+      }
+    } catch {
+      // Best-effort: always clear local session.
+    }
+    clearSandboxConversationId(tenantId, storageScope);
+    setServerConversationId(null);
     clearSandboxMessages(tenantId, storageScope);
     setMessages([]);
-  }, [tenantId, storageScope]);
+  }, [tenantId, storageScope, serverConversationId]);
 
   const send = useCallback(async () => {
     const text = draft.trim();
@@ -92,7 +127,11 @@ export function ChasterBrainSandboxChat({
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ tenant_id: tenantId, message: text }),
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          message: text,
+          ...(serverConversationId ? { conversation_id: serverConversationId } : {}),
+        }),
       });
       const payload = (await res.json().catch(() => ({}))) as SandboxApiPayload;
       if (!res.ok) {
@@ -103,6 +142,13 @@ export function ChasterBrainSandboxChat({
               : "Check that the brain API is reachable and CORS allows this origin."
           }`,
         );
+      }
+      const cid =
+        typeof payload.conversation_id === "string" && payload.conversation_id.trim()
+          ? payload.conversation_id.trim()
+          : null;
+      if (cid) {
+        setServerConversationId(cid);
       }
       setMessages((m) => [
         ...m,
@@ -148,7 +194,7 @@ export function ChasterBrainSandboxChat({
         });
       });
     }
-  }, [draft, pending, tenantId, translate, compact]);
+  }, [draft, pending, tenantId, translate, compact, serverConversationId]);
 
   const listMax = compact ? "max-h-[200px]" : "max-h-[min(70vh,520px)]";
 
@@ -157,7 +203,13 @@ export function ChasterBrainSandboxChat({
       className={`flex flex-col gap-3 rounded-lg border bg-card p-3 ${compact ? "min-h-[220px]" : "min-h-[320px]"}`}
     >
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" disabled={!tenantId} onClick={clearChat}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!tenantId}
+          onClick={() => void clearChat()}
+        >
           {translate("chaster.portal.settings_sandbox_new_chat")}
         </Button>
       </div>

@@ -6,6 +6,10 @@ from app.main import app
 def test_runtime_status_endpoint(monkeypatch):
     client = TestClient(app)
     monkeypatch.setattr(
+        "app.main.validate_tenant_access_token",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(
         "app.main.get_runtime_control",
         lambda tenant_id: {
             "tenant_id": tenant_id,
@@ -14,13 +18,20 @@ def test_runtime_status_endpoint(monkeypatch):
             "updated_at": "2026-01-01T00:00:00Z",
         },
     )
-    res = client.get("/v1/control/runtime/tenant-1")
+    res = client.get(
+        "/v1/control/runtime/tenant-1",
+        headers={"Authorization": "Bearer test-token"},
+    )
     assert res.status_code == 200
     assert res.json()["is_running"] is True
 
 
 def test_parameters_update_endpoint(monkeypatch):
     client = TestClient(app)
+    monkeypatch.setattr(
+        "app.main.validate_tenant_access_token",
+        lambda **kwargs: None,
+    )
     monkeypatch.setattr(
         "app.main.set_parameters",
         lambda payload: {
@@ -34,6 +45,7 @@ def test_parameters_update_endpoint(monkeypatch):
     )
     res = client.post(
         "/v1/control/parameters",
+        headers={"Authorization": "Bearer test-token"},
         json={
             "tenant_id": "tenant-1",
             "confidence_threshold": 0.72,

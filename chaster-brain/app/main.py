@@ -1,4 +1,5 @@
 import secrets
+import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -42,6 +43,8 @@ from app.models import (
     RuntimeControlUpdate,
     SandboxMessageRequest,
     SandboxMessageResponse,
+    SandboxResetRequest,
+    SandboxResetResponse,
     WidgetHandshakeRequest,
     WidgetHandshakeResponse,
     WidgetProcessRequest,
@@ -53,6 +56,7 @@ from app.rag.retriever import cache_faq_answer, get_cached_faq_answer
 
 app = FastAPI(title="Chaster Brain", version="0.1.0")
 orchestrator = build_graph()
+logger = logging.getLogger(__name__)
 
 
 def _maybe_apply_personal_low_confidence_response(*, message: str, state: dict, params: dict) -> None:
@@ -216,7 +220,11 @@ def dashboard_stats(tenant_id: str, authorization: str = Header(default="", alia
 
 
 @app.post("/v1/control/sandbox/message", response_model=SandboxMessageResponse)
-def sandbox_message(payload: SandboxMessageRequest, authorization: str = Header(default="", alias="Authorization")):
+def sandbox_message(
+    payload: SandboxMessageRequest,
+    background_tasks: BackgroundTasks,
+    authorization: str = Header(default="", alias="Authorization"),
+):
     _require_tenant_control_access(authorization, payload.tenant_id)
     runtime = get_runtime_control(payload.tenant_id)
     if not runtime.get("is_running", True):
@@ -225,25 +233,121 @@ def sandbox_message(payload: SandboxMessageRequest, authorization: str = Header(
             detail="Chaster Brain is currently stopped for this tenant",
         )
 
-    normalized = {
-        "tenant_id": payload.tenant_id,
-        "app_id": "sandbox-control",
-        "message": payload.message,
-        "metadata": {"source": "portal_settings_sandbox"},
-    }
-    state = orchestrator.invoke(normalized)
+    conversation_id: str | None = None
+    if payload.conversation_id:
+        existing = _try_resume_conversation(
+            tenant_id=payload.tenant_id,
+            conversation_id=str(payload.conversation_id),
+        )
+        if existing and existing.get("id"):
+            conversation_id = str(existing["id"])
+
+    if conversation_id is None:
+        conversation_id = _create_sandbox_ai_conversation(tenant_id=payload.tenant_id)
+
+    memory_context = memory_load_context(conversation_id)
+    history_payload = _history_to_chat(memory_context.history)
+
+    state: dict | None = None
+    if not memory_context.history:
+        cached = get_cached_faq_answer(payload.tenant_id, payload.message)
+        if cached:
+            state = {
+                "intent": "faq_or_general",
+                "confidence": float(cached.get("confidence", 0.85)),
+                "response": str(cached.get("response", "")),
+                "used_sources": list(cached.get("sources") or []),
+                "cache_hit": True,
+            }
+
+    if state is None:
+        normalized = {
+            "tenant_id": payload.tenant_id,
+            "app_id": "sandbox-control",
+            "message": payload.message,
+            "metadata": {"source": "portal_settings_sandbox"},
+            "conversation_id": conversation_id,
+            "summary": memory_context.summary,
+            "history": history_payload,
+        }
+        state = orchestrator.invoke(normalized)
+
     params = get_parameters(payload.tenant_id)
     _maybe_apply_personal_low_confidence_response(
         message=payload.message, state=state, params=params
     )
+
+    if (
+        state.get("intent") == "faq_or_general"
+        and float(state["confidence"]) >= float(params["confidence_threshold"])
+        and not memory_context.history
+    ):
+        cache_faq_answer(
+            payload.tenant_id,
+            payload.message,
+            response=state["response"],
+            sources=state.get("used_sources", []),
+            confidence=float(state["confidence"]),
+        )
+
     record_ai_request(payload.tenant_id, state["intent"], float(state["confidence"]))
+
+    if conversation_id:
+        insert_row(
+            "messages",
+            {
+                "conversation_id": conversation_id,
+                "sender_id": None,
+                "body": payload.message,
+            },
+        )
+        insert_row(
+            "messages",
+            {
+                "conversation_id": conversation_id,
+                "sender_id": None,
+                "body": state["response"],
+            },
+        )
+        memory_append_turn(
+            conversation_id,
+            user_message=payload.message,
+            assistant_message=state["response"],
+        )
+        background_tasks.add_task(
+            memory_maybe_compress,
+            conversation_id,
+            tenant_id=payload.tenant_id,
+        )
+
     return SandboxMessageResponse(
         tenant_id=payload.tenant_id,
         intent=state["intent"],
         confidence=state["confidence"],
         response=state["response"],
         used_sources=state.get("used_sources", []),
+        conversation_id=conversation_id,
     )
+
+
+@app.post("/v1/control/sandbox/reset", response_model=SandboxResetResponse)
+def sandbox_reset(
+    payload: SandboxResetRequest,
+    authorization: str = Header(default="", alias="Authorization"),
+):
+    _require_tenant_control_access(authorization, payload.tenant_id)
+    if payload.conversation_id:
+        existing = _try_resume_conversation(
+            tenant_id=payload.tenant_id,
+            conversation_id=str(payload.conversation_id),
+        )
+        if not existing or not existing.get("id"):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="Unknown conversation for this tenant",
+            )
+    reset_conversation_cache(payload.conversation_id)
+    return SandboxResetResponse()
 
 
 def _resolve_ai_state(tenant_id: str) -> tuple[bool, str]:
@@ -290,6 +394,28 @@ def _create_guest_conversation(*, tenant_id: str, guest_name: str | None, guest_
     if not row:
         return None
     return row.get("id")
+
+
+def _create_sandbox_ai_conversation(*, tenant_id: str) -> str | None:
+    """Isolated conversation row for control-plane sandbox (not the widget guest shape)."""
+
+    try:
+        row = insert_row(
+            "conversations",
+            {
+                "tenant_id": tenant_id,
+                "type": "team_group",
+                "name": "Chaster Brain sandbox",
+                "last_message_preview": "sandbox:ai",
+            },
+        )
+    except Exception as exc:
+        logger.warning("sandbox: could not create conversation (%s)", exc)
+        return None
+    if not row:
+        return None
+    rid = row.get("id")
+    return str(rid) if rid else None
 
 
 def _try_resume_conversation(*, tenant_id: str, conversation_id: str) -> dict | None:

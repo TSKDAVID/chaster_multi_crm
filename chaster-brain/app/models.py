@@ -141,6 +141,7 @@ class DashboardStatsResponse(BaseModel):
 class SandboxMessageRequest(BaseModel):
     tenant_id: str
     message: str = Field(min_length=1, max_length=10000)
+    conversation_id: str | None = None
 
 
 class SandboxMessageResponse(BaseModel):
@@ -149,3 +150,13 @@ class SandboxMessageResponse(BaseModel):
     confidence: float
     response: str
     used_sources: list[str] = Field(default_factory=list)
+    conversation_id: str | None = None
+
+
+class SandboxResetRequest(BaseModel):
+    tenant_id: str
+    conversation_id: str | None = None
+
+
+class SandboxResetResponse(BaseModel):
+    ok: bool = True

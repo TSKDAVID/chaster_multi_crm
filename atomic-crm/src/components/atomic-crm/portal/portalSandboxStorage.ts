@@ -92,3 +92,56 @@ export function clearSandboxMessages(
     // ignore
   }
 }
+
+const CONVERSATION_PREFIX = "chaster.brain.sandbox.conversation.v1:";
+
+export function sandboxConversationStorageKey(
+  tenantId: string,
+  scope: "portal" | "hq",
+): string {
+  return `${CONVERSATION_PREFIX}${scope}:${tenantId}`;
+}
+
+export function loadSandboxConversationId(
+  tenantId: string,
+  scope: "portal" | "hq",
+): string | null {
+  if (!tenantId) return null;
+  const storage = safeStorage();
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(sandboxConversationStorageKey(tenantId, scope))?.trim();
+    return raw || null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSandboxConversationId(
+  tenantId: string,
+  scope: "portal" | "hq",
+  conversationId: string,
+): void {
+  if (!tenantId || !conversationId.trim()) return;
+  const storage = safeStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(
+      sandboxConversationStorageKey(tenantId, scope),
+      conversationId.trim(),
+    );
+  } catch {
+    // ignore
+  }
+}
+
+export function clearSandboxConversationId(tenantId: string, scope: "portal" | "hq"): void {
+  if (!tenantId) return;
+  const storage = safeStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(sandboxConversationStorageKey(tenantId, scope));
+  } catch {
+    // ignore
+  }
+}
