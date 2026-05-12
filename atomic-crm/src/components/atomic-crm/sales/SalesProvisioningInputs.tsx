@@ -13,6 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+/** Radix Select forbids `SelectItem value=""`; use this for "none" rows in choice lists. */
+export const CHASTER_SELECT_NONE = "__chaster_select_none__";
+
 /**
  * Optional HQ-only fields on user create: client tenant invite and/or platform team role.
  */
@@ -20,7 +23,11 @@ export function SalesProvisioningInputs() {
   const translate = useTranslate();
   const { isOwnerSide, can } = useCurrentUserRole();
   const tenantId = useWatch({ name: "tenant_id" }) as string | undefined;
-  const hasTenant = Boolean(tenantId && String(tenantId).trim() !== "");
+  const hasTenant = Boolean(
+    tenantId &&
+      String(tenantId).trim() !== "" &&
+      tenantId !== CHASTER_SELECT_NONE,
+  );
   const tenantsQuery = useQuery({
     queryKey: ["hq-tenant-choices-for-sales-create"],
     queryFn: async () => {
@@ -37,7 +44,7 @@ export function SalesProvisioningInputs() {
   const tenantChoices = useMemo(() => {
     const rows = tenantsQuery.data ?? [];
     return [
-      { id: "", name: translate("chaster.sales.create.tenant_none") },
+      { id: CHASTER_SELECT_NONE, name: translate("chaster.sales.create.tenant_none") },
       ...rows.map((t) => ({
         id: t.id,
         name: `${t.company_name ?? t.slug ?? t.id}${t.slug ? ` (${t.slug})` : ""}`,
@@ -58,7 +65,7 @@ export function SalesProvisioningInputs() {
 
   const hqRoleChoices = useMemo(
     () => [
-      { id: "", name: translate("chaster.sales.create.hq_role_none") },
+      { id: CHASTER_SELECT_NONE, name: translate("chaster.sales.create.hq_role_none") },
       { id: "hq_support_agent", name: translate("chaster.hq.platform_team_role_staff") },
       { id: "hq_support_lead", name: translate("chaster.sales.create.hq_support_lead") },
       { id: "hq_ops_admin", name: translate("chaster.hq.platform_team_role_admin") },

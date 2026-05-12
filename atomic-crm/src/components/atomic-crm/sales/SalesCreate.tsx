@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CrmDataProvider } from "../providers/types";
 import type { SalesFormData } from "../types";
 import { SalesInputs } from "./SalesInputs";
-import { SalesProvisioningInputs } from "./SalesProvisioningInputs";
+import { SalesProvisioningInputs, CHASTER_SELECT_NONE } from "./SalesProvisioningInputs";
 
 function sanitizeSalesPayload(data: SalesFormData): SalesFormData {
-  const tenantId = data.tenant_id?.trim() ? data.tenant_id.trim() : undefined;
-  const hqRole = data.chaster_team_role?.trim()
-    ? data.chaster_team_role.trim()
-    : undefined;
+  const none = (v: string | undefined) =>
+    !v || String(v).trim() === "" || v === CHASTER_SELECT_NONE;
+
+  const tenantId = none(data.tenant_id) ? undefined : String(data.tenant_id).trim();
+  const hqRole = none(data.chaster_team_role) ? undefined : String(data.chaster_team_role).trim();
   if (tenantId && hqRole) {
     throw new Error(
       "Choose either HQ team membership or a client company invite, not both.",
@@ -97,9 +98,9 @@ export function SalesCreate() {
               last_name: "",
               administrator: false,
               disabled: false,
-              tenant_id: "",
+              tenant_id: CHASTER_SELECT_NONE,
               tenant_member_role: "workspace_member",
-              chaster_team_role: "",
+              chaster_team_role: CHASTER_SELECT_NONE,
             }}
           >
             <SalesInputs />
