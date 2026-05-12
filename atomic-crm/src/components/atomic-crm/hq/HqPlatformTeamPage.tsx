@@ -418,11 +418,6 @@ function HqPlatformTeamPageInner() {
           <Button asChild variant="outline" size="sm">
             <Link to="/sales">{translate("chaster.hq.card_people_crm_users")}</Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/hq/workspace/team">
-              {translate("chaster.hq.card_people_workspace_team")}
-            </Link>
-          </Button>
         </CardContent>
       </Card>
 

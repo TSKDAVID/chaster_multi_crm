@@ -735,21 +735,14 @@ export const englishCrmMessages = {
       platform_team_add_submit: "Add",
       crm_workspace_title: "Your organization (CRM)",
       crm_workspace_desc:
-        "Team and knowledge base counts, hot contacts, activity, and tasks for the tenant linked to your user (often your own company). Team/KB tiles open HQ workspace pages (/hq/workspace/…), not the Portal tab. Platform-wide customer data is in the table below.",
+        "Hot contacts, activity, and tasks for the tenant linked to your user (often your own company). Use Contacts and Companies for full CRM lists. Platform-wide customer data is in the directory below.",
       crm_workspace_no_tenant_desc:
-        "Add your user to a client tenant (portal membership) to see this workspace here. The table below lists platform tenants; it does not replace CRM Companies.",
-      crm_workspace_open_portal: "Open portal home",
+        "Link your user to a client tenant (portal membership) to scope this card to an organization. Use the directory below for all companies.",
       crm_workspace_followup:
-        "“Click to open” on team and knowledge base goes to your HQ workspace (/hq/workspace/…), not the Portal tab. Use Contacts and Companies for CRM lists. Use the Portal tab to preview client navigation.",
+        "To review the client portal experience, sign in with a test user that belongs to that tenant.",
       crm_workspace_link_contacts: "Contacts",
       crm_workspace_link_companies: "Companies",
       workspace_back: "Back to HQ dashboard",
-      workspace_tab_team: "CRM workspace team",
-      workspace_tab_kb: "Knowledge base",
-      workspace_context_note:
-        "HQ workspace: same tools as in the portal, with HQ URLs and navigation. Use the Portal tab when you want to preview how clients move through the app.",
-      workspace_need_tenant:
-        "Your user is not linked to a tenant. Join an organization (portal) or ask an admin, then open this page again.",
       hint_tenants_vs_companies:
         "Tip: rows here are platform tenants (customers you provision in HQ). The Companies tab lists CRM pipeline companies in the database — a separate table. Creating a tenant does not create a CRM company; add those under Companies if you use the sales CRM per tenant.",
       stat_tenants: "Total companies",
@@ -1084,28 +1077,6 @@ export const englishCrmMessages = {
       nav_strip_title: "Portal pages",
       nav_strip_hint:
         "Open these sections anytime. On desktop, the same links appear in a second row under the main menu.",
-      sandbox_open_hq: "Open HQ dashboard (real CRM)",
-      sandbox_banner_title: "Portal dashboard sandbox (HQ only)",
-      sandbox_banner_body:
-        "Nothing here touches tenant CRM rows. Hot contacts, activity, and tasks live in your own sandbox row until you reset them — use this to preview the portal layout safely.",
-      sandbox_seed: "Load sample rows",
-      sandbox_reset: "Clear sandbox",
-      sandbox_empty_hot: "No sandbox hot contacts yet. Use + or load samples.",
-      sandbox_empty_activity:
-        "No sandbox activity yet. Latest activity here is isolated from production CRM.",
-      sandbox_empty_tasks: "No sandbox tasks yet.",
-      sandbox_add_activity: "Add activity",
-      sandbox_activity_hint:
-        "One-line stories for layout testing — not written to contacts or notes.",
-      sandbox_activity_placeholder: "Short headline",
-      sandbox_activity_detail_ph: "Optional note body",
-      sandbox_add_contact: "Add sandbox contact",
-      sandbox_contact_name_ph: "Full name",
-      sandbox_contact_sub_ph: "Subtitle (job · company)",
-      sandbox_add_task: "Add sandbox task",
-      sandbox_task_text_ph: "Task description",
-      sandbox_remove_row: "Remove",
-      sandbox_task_due: "Due %{date}",
       kb_title: "Knowledge base",
       kb_desc:
         "Upload documents or add FAQs for your AI context. Admins can add or remove entries.",

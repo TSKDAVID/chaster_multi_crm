@@ -246,11 +246,6 @@ function SalesListHqIntro() {
               {translate("chaster.hq.menu_platform_team")}
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/hq/workspace/team">
-              {translate("chaster.hq.card_people_workspace_team")}
-            </Link>
-          </Button>
         </div>
       </AlertDescription>
     </Alert>

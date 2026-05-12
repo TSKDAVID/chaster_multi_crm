@@ -76,8 +76,6 @@ import { HqMessagesPage } from "../hq/HqMessagesPage";
 import { HqSupportCasesPage } from "../hq/HqSupportCasesPage";
 import { HqSupportCaseDetailPage } from "../hq/HqSupportCaseDetailPage";
 import { HqSupportFaqsPage } from "../hq/HqSupportFaqsPage";
-import { HqWorkspaceTeamPage } from "../hq/HqWorkspaceTeamPage";
-import { HqWorkspaceKnowledgeBasePage } from "../hq/HqWorkspaceKnowledgeBasePage";
 import { HqPlatformTeamPage } from "../hq/HqPlatformTeamPage";
 import { HqOrganizationsPage } from "../hq/HqOrganizationsPage";
 import { LandingTestPage } from "../public-test/LandingTestPage";
@@ -354,7 +352,6 @@ const DesktopAdmin = (
           element={<HqSupportCaseDetailPage />}
         />
         <Route path="/hq/support/faqs" element={<HqSupportFaqsPage />} />
-        <Route path="/hq/workspace/team" element={<HqWorkspaceTeamPage />} />
         <Route
           path="/hq/platform-team"
           element={<HqPlatformTeamPage />}
@@ -362,10 +359,6 @@ const DesktopAdmin = (
         <Route
           path="/hq/organizations"
           element={<HqOrganizationsPage />}
-        />
-        <Route
-          path="/hq/workspace/knowledge-base"
-          element={<HqWorkspaceKnowledgeBasePage />}
         />
         <Route path="/portal" element={<PortalHomePage />} />
         <Route
@@ -495,7 +488,6 @@ const MobileAdmin = (
             element={<HqSupportCaseDetailPage />}
           />
           <Route path="/hq/support/faqs" element={<HqSupportFaqsPage />} />
-          <Route path="/hq/workspace/team" element={<HqWorkspaceTeamPage />} />
           <Route
             path="/hq/platform-team"
             element={<HqPlatformTeamPage />}
@@ -503,10 +495,6 @@ const MobileAdmin = (
           <Route
             path="/hq/organizations"
             element={<HqOrganizationsPage />}
-          />
-          <Route
-            path="/hq/workspace/knowledge-base"
-            element={<HqWorkspaceKnowledgeBasePage />}
           />
           <Route path="/portal" element={<PortalHomePage />} />
           <Route

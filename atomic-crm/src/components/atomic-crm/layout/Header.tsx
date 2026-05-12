@@ -149,7 +149,7 @@ const Header = () => {
                     to={homeTo}
                     isActive={isHomeActive}
                   />
-                  {isOwnerSide || (!tenantId && !isOwnerSide) ? (
+                  {!isOwnerSide && tenantId ? (
                     <NavigationTab
                       label={translate("chaster.header.portal")}
                       to="/portal"

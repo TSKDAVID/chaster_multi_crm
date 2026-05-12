@@ -56,7 +56,7 @@ There is no safe way for the app or a repo script to migrate **your** cloud data
 
 This migration adds `tenants`, `tenant_members`, `tenant_settings`, knowledge-base tables, **tenant-scoped RLS** on CRM tables, and a seed tenant **`default-chaster`**. Existing data is backfilled onto that tenant; new auth users are linked via `handle_new_user`.
 
-- **HQ / internal users:** insert their `auth.users.id` into `chaster_team` (SQL or Dashboard) so `is_chaster_staff()` is true and they can manage all tenants. In the app, **HQ dashboard → HQ platform team** (`/hq/platform-team`) lists Chaster staff and lets **HQ super admins** add users (must already have a CRM login) and change HQ roles. That is separate from **CRM user accounts** (`/sales`, everyone who can sign in) and **CRM workspace team** (`/hq/workspace/team`, `tenant_members` on your internal tenant). Migration `20260420120000_chaster_team_super_admin_rls.sql` restricts edits to `chaster_team` to HQ super admins only.
+- **HQ / internal users:** insert their `auth.users.id` into `chaster_team` (SQL or Dashboard) so `is_chaster_staff()` is true and they can manage all tenants. In the app, **HQ dashboard → HQ platform team** (`/hq/platform-team`) lists Chaster staff and lets **HQ super admins** add users (must already have a CRM login) and change HQ roles. That is separate from **CRM user accounts** (`/sales`, everyone who can sign in) and **tenant members** managed from each client company in the HQ directory or from the client portal. Migration `20260420120000_chaster_team_super_admin_rls.sql` restricts edits to `chaster_team` to HQ super admins only.
 
   ```sql
   update public.chaster_team

@@ -19,7 +19,6 @@ import { TenantPortalGuard } from "../access/TenantPortalGuard";
 import { useChasterAccess } from "../access/chasterAccessContext";
 import { useCurrentUserRole } from "../access/useCurrentUserRole";
 import { Dashboard } from "../dashboard/Dashboard";
-import { PortalSandboxDashboard } from "./PortalSandboxDashboard";
 import {
   Card,
   CardContent,
@@ -77,21 +76,6 @@ export function PortalHomePage() {
   const { teamCount, kbCount } = useTenantWorkspaceCounts(tenantId);
 
   const [embedCopied, setEmbedCopied] = useState(false);
-  /** auth.users.id — not sales.id; sandbox RLS matches auth.uid(). */
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthUserId(session?.user?.id ?? null);
-    });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthUserId(session?.user?.id ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     const read = () => {
@@ -340,22 +324,7 @@ export function PortalHomePage() {
           </div>
         ) : null}
 
-        {isOwnerSide ? (
-          <div className="px-4 pb-4 flex flex-wrap gap-2">
-            <Button asChild variant="secondary" size="sm">
-              <Link
-                to="/portal/knowledge-base"
-                className="inline-flex items-center gap-2"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                {translate("chaster.portal.nav_kb")}
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/hq">{translate("chaster.portal.sandbox_open_hq")}</Link>
-            </Button>
-          </div>
-        ) : (
+        {!isOwnerSide ? (
           <div className="px-4 pb-4 flex flex-wrap gap-2">
             <Button asChild variant="secondary" size="sm">
               <Link
@@ -378,14 +347,12 @@ export function PortalHomePage() {
               <Link to="/deals">{translate("chaster.portal.quick_deals")}</Link>
             </Button>
           </div>
-        )}
+        ) : null}
 
-        {isOwnerSide ? (
-          authUserId ? (
-            <PortalSandboxDashboard userId={authUserId} />
-          ) : null
-        ) : tenantId ? (
-          <Dashboard tenantScopeId={tenantId} />
+        {!isOwnerSide && tenantId ? (
+          <div className="px-4 pb-6">
+            <Dashboard tenantScopeId={tenantId} />
+          </div>
         ) : null}
       </div>
     </TenantPortalGuard>

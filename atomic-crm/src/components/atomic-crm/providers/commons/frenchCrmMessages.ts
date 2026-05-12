@@ -743,21 +743,14 @@ export const frenchCrmMessages = {
       platform_team_add_submit: "Ajouter",
       crm_workspace_title: "Votre organisation (CRM)",
       crm_workspace_desc:
-        "Effectif, base de connaissances, contacts chauds, activité et tâches pour le tenant lié à votre compte (souvent votre entreprise). Les tuiles équipe / KB ouvrent les pages espace HQ (/hq/workspace/…), pas l’onglet Portail. Les données de tous les clients sont dans le tableau ci-dessous.",
+        "Contacts chauds, activité et tâches pour le tenant lié à votre compte (souvent votre entreprise). Utilisez Contacts et Entreprises pour les listes CRM complètes. Les données de tous les clients sont dans l’annuaire ci-dessous.",
       crm_workspace_no_tenant_desc:
-        "Ajoutez votre utilisateur à un tenant client (membre portail) pour voir cet espace ici. Le tableau ci-dessous liste les tenants plateforme ; il ne remplace pas les Entreprises CRM.",
-      crm_workspace_open_portal: "Ouvrir l’accueil portail",
+        "Liez votre utilisateur à un tenant client (membre portail) pour cadrer cette carte sur une organisation. L’annuaire ci-dessous liste toutes les entreprises.",
       crm_workspace_followup:
-        "« Cliquer pour ouvrir » sur l’équipe et la base de connaissances mène à l’espace HQ (/hq/workspace/…), pas à l’onglet Portail. Utilisez Contacts et Entreprises pour les listes CRM. Utilisez Portail pour prévisualiser la navigation client.",
+        "Pour tester l’expérience portail, connectez-vous avec un compte de test rattaché à ce tenant.",
       crm_workspace_link_contacts: "Contacts",
       crm_workspace_link_companies: "Entreprises",
       workspace_back: "Retour au tableau de bord HQ",
-      workspace_tab_team: "Équipe espace CRM",
-      workspace_tab_kb: "Base de connaissances",
-      workspace_context_note:
-        "Espace HQ : mêmes outils que dans le portail, avec des URL et une navigation HQ. Utilisez l’onglet Portail pour prévoir le parcours côté client.",
-      workspace_need_tenant:
-        "Votre utilisateur n’est pas lié à un tenant. Rejoignez une organisation (portail) ou demandez à un admin, puis revenez ici.",
       hint_tenants_vs_companies:
         "Astuce : chaque ligne est un tenant plateforme (client provisionné au siège). L’onglet Entreprises liste les sociétés du CRM — table distincte. Créer un tenant ne crée pas une fiche Entreprise CRM ; ajoutez-la dans Entreprises si vous utilisez le CRM commercial par tenant.",
       stat_tenants: "Entreprises (total)",
@@ -1100,28 +1093,6 @@ export const frenchCrmMessages = {
       nav_strip_title: "Pages du portail",
       nav_strip_hint:
         "Accédez à ces sections à tout moment. Sur ordinateur, les mêmes liens sont sous le menu principal.",
-      sandbox_open_hq: "Ouvrir le tableau de bord HQ (CRM réel)",
-      sandbox_banner_title: "Bac à sable du tableau de bord portail (HQ uniquement)",
-      sandbox_banner_body:
-        "Aucune donnée n’écrit dans le CRM du tenant. Contacts chauds, activité et tâches sont dans votre propre bac à sable jusqu’à réinitialisation.",
-      sandbox_seed: "Charger des exemples",
-      sandbox_reset: "Vider le bac à sable",
-      sandbox_empty_hot: "Pas encore de contacts « chauds » de test. Utilisez + ou les exemples.",
-      sandbox_empty_activity:
-        "Pas encore d’activité de test. Elle est isolée du CRM de production.",
-      sandbox_empty_tasks: "Pas encore de tâches de test.",
-      sandbox_add_activity: "Ajouter une activité",
-      sandbox_activity_hint:
-        "Pour tester la mise en page — pas les contacts ni les notes réels.",
-      sandbox_activity_placeholder: "Titre court",
-      sandbox_activity_detail_ph: "Note optionnelle",
-      sandbox_add_contact: "Ajouter un contact de test",
-      sandbox_contact_name_ph: "Nom complet",
-      sandbox_contact_sub_ph: "Sous-titre (poste · entreprise)",
-      sandbox_add_task: "Ajouter une tâche de test",
-      sandbox_task_text_ph: "Description de la tâche",
-      sandbox_remove_row: "Supprimer",
-      sandbox_task_due: "Pour le %{date}",
       kb_title: "Base de connaissances",
       kb_desc:
         "Téléversez des documents ou ajoutez des FAQ pour le contexte IA. Les admins peuvent gérer les entrées.",

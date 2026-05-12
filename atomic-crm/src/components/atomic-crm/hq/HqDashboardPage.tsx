@@ -49,7 +49,6 @@ import {
 } from "./hqTenantActionsClient";
 import { useHqDashboardStats, useHqTenantDirectory } from "./useHqQueries";
 import { Dashboard } from "../dashboard/Dashboard";
-import { TenantWorkspaceStats } from "../portal/TenantWorkspaceStats";
 
 export const HqDashboardPath = "/hq";
 
@@ -456,10 +455,6 @@ export function HqDashboardPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <TenantWorkspaceStats tenantId={tenantId} statLinkScope="hq" />
-                <p className="text-xs text-muted-foreground">
-                  {translate("chaster.hq.crm_workspace_followup")}
-                </p>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="outline" size="sm">
                     <Link to="/contacts">{translate("chaster.hq.crm_workspace_link_contacts")}</Link>
@@ -468,6 +463,9 @@ export function HqDashboardPage() {
                     <Link to="/companies">{translate("chaster.hq.crm_workspace_link_companies")}</Link>
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {translate("chaster.hq.crm_workspace_followup")}
+                </p>
                 <Dashboard tenantScopeId={tenantId} />
               </CardContent>
             </Card>
@@ -484,10 +482,10 @@ export function HqDashboardPage() {
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <Button asChild size="sm">
-                  <Link to="/portal">{translate("chaster.hq.crm_workspace_open_portal")}</Link>
+                  <Link to="/contacts">{translate("chaster.hq.open_crm")}</Link>
                 </Button>
                 <Button asChild variant="outline" size="sm">
-                  <Link to="/contacts">{translate("chaster.hq.open_crm")}</Link>
+                  <Link to="/companies">{translate("chaster.hq.crm_workspace_link_companies")}</Link>
                 </Button>
               </CardContent>
             </Card>

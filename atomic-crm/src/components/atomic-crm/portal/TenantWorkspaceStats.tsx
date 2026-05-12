@@ -8,13 +8,13 @@ import {
 } from "@/components/ui/card";
 import { useTenantWorkspaceCounts } from "./useTenantWorkspaceCounts";
 
-type StatLinkScope = "portal" | "hq" | "none";
+type StatLinkScope = "portal" | "none";
 
 type Props = {
   tenantId: string;
   className?: string;
   /**
-   * Where team/KB tiles navigate: client portal routes, HQ workspace routes, or no links.
+   * Where team/KB tiles navigate: client portal routes, or no links.
    * @default portal
    */
   statLinkScope?: StatLinkScope;
@@ -32,17 +32,9 @@ export function TenantWorkspaceStats({
   const { teamCount, kbCount } = useTenantWorkspaceCounts(tenantId);
 
   const teamTo =
-    statLinkScope === "portal"
-      ? "/portal/team"
-      : statLinkScope === "hq"
-        ? "/hq/workspace/team"
-        : undefined;
+    statLinkScope === "portal" ? "/portal/team" : undefined;
   const kbTo =
-    statLinkScope === "portal"
-      ? "/portal/knowledge-base"
-      : statLinkScope === "hq"
-        ? "/hq/workspace/knowledge-base"
-        : undefined;
+    statLinkScope === "portal" ? "/portal/knowledge-base" : undefined;
 
   return (
     <div
