@@ -14,7 +14,8 @@ select
     null::json as contact,
     null::json as deal,
     null::json as contact_note,
-    null::json as deal_note
+    null::json as deal_note,
+    c.tenant_id as tenant_id
 from public.companies c
 union all
 select
@@ -27,8 +28,10 @@ select
     to_json(co.*) as contact,
     null::json as deal,
     null::json as contact_note,
-    null::json as deal_note
+    null::json as deal_note,
+    c_co.tenant_id as tenant_id
 from public.contacts co
+inner join public.companies c_co on c_co.id = co.company_id
 union all
 select
     ('contactNote.' || cn.id || '.created') as id,
@@ -40,9 +43,11 @@ select
     null::json as contact,
     null::json as deal,
     to_json(cn.*) as contact_note,
-    null::json as deal_note
+    null::json as deal_note,
+    c_cn.tenant_id as tenant_id
 from public.contact_notes cn
     left join public.contacts co on co.id = cn.contact_id
+    left join public.companies c_cn on c_cn.id = co.company_id
 union all
 select
     ('deal.' || d.id || '.created') as id,
@@ -54,8 +59,10 @@ select
     null::json as contact,
     to_json(d.*) as deal,
     null::json as contact_note,
-    null::json as deal_note
+    null::json as deal_note,
+    c_d.tenant_id as tenant_id
 from public.deals d
+inner join public.companies c_d on c_d.id = d.company_id
 union all
 select
     ('dealNote.' || dn.id || '.created') as id,
@@ -67,9 +74,11 @@ select
     null::json as contact,
     null::json as deal,
     null::json as contact_note,
-    to_json(dn.*) as deal_note
+    to_json(dn.*) as deal_note,
+    c_dn.tenant_id as tenant_id
 from public.deal_notes dn
-    left join public.deals d on d.id = dn.deal_id;
+    left join public.deals d on d.id = dn.deal_id
+    left join public.companies c_dn on c_dn.id = d.company_id;
 
 drop view if exists public.contacts_summary cascade;
 drop view if exists public.companies_summary cascade;
