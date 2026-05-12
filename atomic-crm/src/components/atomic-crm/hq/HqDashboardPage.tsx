@@ -4,10 +4,7 @@ import {
   Download,
   KeyRound,
   LayoutDashboard,
-  MessageSquare,
   Plus,
-  Shield,
-  Users,
 } from "lucide-react";
 import { useNotify, useTranslate } from "ra-core";
 import { Link } from "react-router";
@@ -44,8 +41,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PermissionGate } from "../access/PermissionGate";
 import { useCurrentUserRole } from "../access/useCurrentUserRole";
 import { logAuditEvent } from "../access/logAuditEvent";
-import { useMessagingUnreadTotal } from "@/modules/messaging/hooks/useMessagingUnread";
-import { UnreadBadge } from "@/modules/messaging/components/UnreadBadge";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import type { HqTenantDirectoryRow } from "./hqTypes";
 import {
@@ -151,7 +146,6 @@ export function HqDashboardPage() {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const { can, tenantId } = useCurrentUserRole();
-  const hqMessagesUnread = useMessagingUnreadTotal(can("hq.messages.view"));
   const { data: stats, isPending: statsLoading } = useHqDashboardStats(true);
   const { data: rows, isPending: dirLoading } = useHqTenantDirectory(true);
 
@@ -499,79 +493,6 @@ export function HqDashboardPage() {
             </Card>
           )}
 
-          <PermissionGate permission="hq.messages.view">
-            <Card>
-              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <MessageSquare className="h-5 w-5" />
-                    {translate("chaster.hq.card_messages_title")}
-                    <UnreadBadge count={hqMessagesUnread.data ?? 0} />
-                  </CardTitle>
-                  <CardDescription>
-                    {translate("chaster.hq.card_messages_desc")}
-                  </CardDescription>
-                </div>
-                <Button asChild size="sm" className="shrink-0">
-                  <Link to="/hq/messages">{translate("chaster.hq.open_messages")}</Link>
-                </Button>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-2 pt-0">
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/hq/messages" className="inline-flex items-center gap-1.5">
-                    <Building2 className="h-3.5 w-3.5" />
-                    {translate("chaster.messages.hq_tab_clients")}
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link
-                    to="/hq/messages?tab=internal"
-                    className="inline-flex items-center gap-1.5"
-                  >
-                    <Users className="h-3.5 w-3.5" />
-                    {translate("chaster.messages.hq_tab_internal")}
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </PermissionGate>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="h-5 w-5" />
-                {translate("chaster.hq.card_people_title")}
-              </CardTitle>
-              <CardDescription>
-                {translate("chaster.hq.card_people_desc")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2 pt-0">
-              <Button asChild size="sm" className="gap-1.5">
-                <Link to="/hq/platform-team">
-                  <Shield className="h-3.5 w-3.5" />
-                  {translate("chaster.hq.card_people_platform_team")}
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/sales">{translate("chaster.hq.card_people_crm_users")}</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/hq/workspace/team">
-                  {translate("chaster.hq.card_people_workspace_team")}
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-wrap gap-3">
-            <Button asChild variant="secondary">
-              <Link to="/contacts">{translate("chaster.hq.open_crm")}</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/portal">{translate("chaster.hq.open_portal")}</Link>
-            </Button>
-          </div>
         </>
       )}
 
