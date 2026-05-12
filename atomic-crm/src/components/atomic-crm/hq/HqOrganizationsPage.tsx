@@ -50,10 +50,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -720,135 +721,187 @@ function HqOrganizationsPageInner() {
       </Tabs>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-full sm:max-w-lg flex flex-col">
-          <SheetHeader>
-            <SheetTitle>{selectedOrg?.name ?? ""}</SheetTitle>
-            <SheetDescription className="font-mono text-xs">
-              {selectedOrg ? `/${selectedOrg.slug}` : null}
-            </SheetDescription>
-          </SheetHeader>
+        <SheetContent className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
           {selectedOrg ? (
-            <div className="flex-1 flex flex-col gap-4 mt-4 overflow-hidden">
-              <div className="flex flex-wrap gap-2">
-                {selectedOrg.purpose ? (
-                  <Badge variant="outline">
-                    {translate(`chaster.hq.organizations.purpose_${selectedOrg.purpose}`, {
-                      _: selectedOrg.purpose,
+            <>
+              <div
+                className="h-1.5 w-full shrink-0"
+                style={{
+                  backgroundColor:
+                    selectedOrg.accent_color?.trim() || ACCENT_PRESETS[0],
+                }}
+                aria-hidden
+              />
+              <SheetHeader className="space-y-3 border-b bg-muted/25 px-6 pb-5 pt-6 text-left sm:pr-14">
+                <SheetTitle className="text-xl font-semibold capitalize leading-snug tracking-tight">
+                  {selectedOrg.name}
+                </SheetTitle>
+                <p className="text-muted-foreground">
+                  <span className="inline-flex items-center rounded-md border border-border/80 bg-background px-2.5 py-1 font-mono text-xs tabular-nums tracking-wide text-muted-foreground shadow-sm">
+                    /{selectedOrg.slug}
+                  </span>
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {selectedOrg.purpose ? (
+                    <Badge variant="secondary" className="font-normal">
+                      {translate(`chaster.hq.organizations.purpose_${selectedOrg.purpose}`, {
+                        _: selectedOrg.purpose,
+                      })}
+                    </Badge>
+                  ) : null}
+                  <Badge variant="outline" className="border-border/80 font-normal tabular-nums">
+                    {translate("chaster.hq.organizations.member_count", {
+                      smart_count: selectedMembers.length,
                     })}
                   </Badge>
-                ) : null}
-                <Badge variant="secondary">
-                  {translate("chaster.hq.organizations.member_count", {
-                    smart_count: selectedMembers.length,
-                  })}
-                </Badge>
-              </div>
-              {selectedOrg.description ? (
-                <p className="text-sm text-muted-foreground">{selectedOrg.description}</p>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <PermissionGate permission="hq.organizations.manage">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    className="gap-1"
-                    onClick={() => setAddMemberOpen(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    {translate("chaster.hq.organizations.add_member")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                    onClick={() => setDeleteOrg(selectedOrg)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    {translate("chaster.hq.organizations.delete_org")}
-                  </Button>
-                </PermissionGate>
-              </div>
-              <div className="flex-1 min-h-0 border rounded-lg">
-                <ScrollArea className="h-[min(55vh,420px)]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{translate("chaster.hq.organizations.col_member")}</TableHead>
-                        <TableHead>{translate("chaster.hq.organizations.col_role")}</TableHead>
-                        <TableHead className="w-[80px]" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedMembers.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-10">
-                            {translate("chaster.hq.organizations.member_empty")}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        selectedMembers.map((m) => (
-                          <TableRow key={m.user_id}>
-                            <TableCell>
-                              <div className="font-medium">
-                                {displayName(salesQuery.data?.[m.user_id])}
-                              </div>
-                              <div className="text-xs text-muted-foreground truncate">
-                                {salesQuery.data?.[m.user_id]?.email}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {canManage ? (
-                                <Select
-                                  value={m.role}
-                                  onValueChange={(v) =>
-                                    updateMemberRoleMutation.mutate({
-                                      userId: m.user_id,
-                                      role: v as "lead" | "admin" | "member",
-                                    })
-                                  }
-                                >
-                                  <SelectTrigger className="h-8 w-[130px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="lead">
-                                      {translate("chaster.hq.organizations.role_lead")}
-                                    </SelectItem>
-                                    <SelectItem value="admin">
-                                      {translate("chaster.hq.organizations.role_admin")}
-                                    </SelectItem>
-                                    <SelectItem value="member">
-                                      {translate("chaster.hq.organizations.role_member")}
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
+                </div>
+              </SheetHeader>
+
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+                  <div className="space-y-6">
+                    {selectedOrg.description ? (
+                      <div className="rounded-xl border border-border/60 bg-muted/15 px-4 py-3">
+                        <p className="text-sm leading-relaxed text-foreground/90">
+                          {selectedOrg.description}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <PermissionGate permission="hq.organizations.manage">
+                      <Button
+                        type="button"
+                        className="w-full gap-2 shadow-sm sm:w-auto"
+                        onClick={() => setAddMemberOpen(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {translate("chaster.hq.organizations.add_member")}
+                      </Button>
+                    </PermissionGate>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-semibold tracking-tight">
+                          {translate("chaster.hq.organizations.members_section_title")}
+                        </span>
+                      </div>
+                      <Separator className="bg-border/80" />
+                      <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm">
+                        <ScrollArea className="h-[min(52vh,400px)]">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-border/60 hover:bg-transparent">
+                                <TableHead className="h-11 bg-muted/70 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                  {translate("chaster.hq.organizations.col_member")}
+                                </TableHead>
+                                <TableHead className="h-11 bg-muted/70 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                  {translate("chaster.hq.organizations.col_role")}
+                                </TableHead>
+                                <TableHead className="h-11 w-[72px] bg-muted/70 p-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground" />
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {selectedMembers.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={3} className="p-0">
+                                    <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
+                                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/80">
+                                        <Users className="h-6 w-6 text-muted-foreground/60" />
+                                      </div>
+                                      <p className="max-w-[260px] text-sm text-muted-foreground">
+                                        {translate("chaster.hq.organizations.member_empty")}
+                                      </p>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
                               ) : (
-                                <Badge variant="outline">{translate(`chaster.hq.organizations.role_${m.role}`)}</Badge>
+                                selectedMembers.map((m) => (
+                                  <TableRow
+                                    key={m.user_id}
+                                    className="border-border/50 bg-background/50"
+                                  >
+                                    <TableCell className="py-3 align-top">
+                                      <div className="font-medium leading-tight">
+                                        {displayName(salesQuery.data?.[m.user_id])}
+                                      </div>
+                                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                                        {salesQuery.data?.[m.user_id]?.email}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3 align-top">
+                                      {canManage ? (
+                                        <Select
+                                          value={m.role}
+                                          onValueChange={(v) =>
+                                            updateMemberRoleMutation.mutate({
+                                              userId: m.user_id,
+                                              role: v as "lead" | "admin" | "member",
+                                            })
+                                          }
+                                        >
+                                          <SelectTrigger className="h-9 w-[132px] border-border/80">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="lead">
+                                              {translate("chaster.hq.organizations.role_lead")}
+                                            </SelectItem>
+                                            <SelectItem value="admin">
+                                              {translate("chaster.hq.organizations.role_admin")}
+                                            </SelectItem>
+                                            <SelectItem value="member">
+                                              {translate("chaster.hq.organizations.role_member")}
+                                            </SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      ) : (
+                                        <Badge variant="outline">
+                                          {translate(`chaster.hq.organizations.role_${m.role}`)}
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="py-3 align-top">
+                                      {canManage ? (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-9 w-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                          onClick={() => removeMemberMutation.mutate(m.user_id)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      ) : null}
+                                    </TableCell>
+                                  </TableRow>
+                                ))
                               )}
-                            </TableCell>
-                            <TableCell>
-                              {canManage ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => removeMemberMutation.mutate(m.user_id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              ) : null}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {canManage ? (
+                  <SheetFooter className="shrink-0 border-t border-border/80 bg-muted/15 px-6 py-4">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full justify-center gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto sm:w-auto"
+                      onClick={() => setDeleteOrg(selectedOrg)}
+                    >
+                      <Trash2 className="h-4 w-4 shrink-0" />
+                      {translate("chaster.hq.organizations.delete_org")}
+                    </Button>
+                  </SheetFooter>
+                ) : null}
               </div>
-            </div>
+            </>
           ) : null}
         </SheetContent>
       </Sheet>

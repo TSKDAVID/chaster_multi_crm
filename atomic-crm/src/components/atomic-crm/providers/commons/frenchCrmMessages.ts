@@ -672,6 +672,7 @@ export const frenchCrmMessages = {
         role_admin: "Admin",
         role_member: "Membre",
         member_empty: "Aucun membre — ajoutez des personnes depuis l’équipe plateforme.",
+        members_section_title: "Membres de l’équipe",
         add_member: "Ajouter un membre",
         delete_org: "Supprimer l’organisation",
         create_title: "Créer une organisation",

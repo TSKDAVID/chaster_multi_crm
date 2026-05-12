@@ -1,0 +1,16 @@
+---
+description: After code changes, commit and push to the remote when possible
+alwaysApply: true
+---
+
+# Git commit and push after updates
+
+When this session **modifies project files** (source, config, migrations, assets—not ephemeral edits only), **before finishing the task**:
+
+1. **Discover the repo root** — run `git rev-parse --show-toplevel` from the workspace (or `cd` until `.git` exists). If there is **no** Git repository, tell the user clearly and **stop** (do not claim you pushed).
+2. **Review changes** — `git status`. Stage only what belongs in version control (respect `.gitignore`; do not commit secrets, `.env`, or large generated artifacts unless the project already tracks them).
+3. **Commit** — `git add …` then `git commit -m "…"` with a short, accurate message describing what changed.
+4. **Push** — `git push` (current branch). If the branch has no upstream, use `git push -u origin <branch>` once.
+5. **If push fails** (auth, no remote, conflicts), report the exact error and what the user must fix; do not pretend success.
+
+**Exceptions:** skip commit/push when the user explicitly asks not to, or when changes are exploratory/unwanted. Prefer **one commit per completed task** unless the user prefers smaller chunks.

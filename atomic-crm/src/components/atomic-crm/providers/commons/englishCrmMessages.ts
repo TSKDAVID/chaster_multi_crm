@@ -665,6 +665,7 @@ export const englishCrmMessages = {
         role_admin: "Admin",
         role_member: "Member",
         member_empty: "No members yet — add people from the platform team.",
+        members_section_title: "Team members",
         add_member: "Add member",
         delete_org: "Delete organization",
         create_title: "Create organization",
