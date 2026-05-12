@@ -7,8 +7,7 @@ import { getSupabaseClient } from "../providers/supabase/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Ensures the user has a tenant (or is Chaster staff using default tenant).
- * Future: inject tenant-scoped React context here.
+ * Wraps portal routes: tenant + module checks. Chaster HQ staff are redirected to `/hq`.
  */
 export function TenantPortalGuard({ children }: { children: ReactNode }) {
   const { isOwnerSide, tenantId, isLoading } = useCurrentUserRole();
