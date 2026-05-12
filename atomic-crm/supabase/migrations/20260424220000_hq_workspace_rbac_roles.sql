@@ -1,5 +1,10 @@
 -- HQ vs Workspace RBAC role normalization and compatibility migration.
 
+-- The legacy BEFORE trigger compares raw role strings ('super_admin' only). Renaming
+-- super_admin -> hq_owner would fire as a false "demote" and abort. Drop for the
+-- backfill; we recreate a normalized guard after normalize_hq_role() exists below.
+DROP TRIGGER IF EXISTS chaster_team_guard_last_super_admin_row ON public.chaster_team;
+
 -- 1) Backfill existing rows to new role names.
 update public.chaster_team
 set role = case role
@@ -320,3 +325,48 @@ begin
   return new;
 end;
 $$;
+
+-- 4) Re-attach last HQ owner guard using normalized roles (hq_owner / legacy super_admin).
+CREATE OR REPLACE FUNCTION public.chaster_team_guard_last_super_admin()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  others int;
+BEGIN
+  IF tg_op = 'DELETE' THEN
+    IF public.normalize_hq_role(OLD.role) = 'hq_owner' THEN
+      SELECT count(*)::int INTO others
+      FROM public.chaster_team
+      WHERE public.normalize_hq_role(role) = 'hq_owner'
+        AND user_id <> OLD.user_id;
+      IF others < 1 THEN
+        RAISE EXCEPTION 'cannot remove the last Chaster HQ super admin';
+      END IF;
+    END IF;
+    RETURN OLD;
+  ELSIF tg_op = 'UPDATE' THEN
+    IF public.normalize_hq_role(OLD.role) = 'hq_owner'
+       AND public.normalize_hq_role(NEW.role) IS DISTINCT FROM 'hq_owner' THEN
+      SELECT count(*)::int INTO others
+      FROM public.chaster_team
+      WHERE public.normalize_hq_role(role) = 'hq_owner'
+        AND user_id <> OLD.user_id;
+      IF others < 1 THEN
+        RAISE EXCEPTION 'cannot demote the last Chaster HQ super admin';
+      END IF;
+    END IF;
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS chaster_team_guard_last_super_admin_row ON public.chaster_team;
+
+CREATE TRIGGER chaster_team_guard_last_super_admin_row
+  BEFORE DELETE OR UPDATE ON public.chaster_team
+  FOR EACH ROW
+  EXECUTE FUNCTION public.chaster_team_guard_last_super_admin();
