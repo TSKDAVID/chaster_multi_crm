@@ -606,6 +606,11 @@ export const englishCrmMessages = {
       hq: "HQ",
       portal: "Portal",
     },
+    brain_sandbox: {
+      meta_intent: "Intent",
+      meta_confidence: "Confidence",
+      meta_sources: "Sources",
+    },
     hq: {
       title: "Chaster HQ",
       subtitle:
@@ -626,6 +631,7 @@ export const englishCrmMessages = {
       open_messages: "Open messages",
       menu_platform_team: "Chaster HQ team",
       menu_organizations: "Internal organizations",
+      menu_brain_sandbox: "Brain sandbox",
       menu_crm_users: "CRM user accounts",
       organizations: {
         title: "Internal organizations",
@@ -779,6 +785,19 @@ export const englishCrmMessages = {
         "To review the client portal experience, sign in with a test user that belongs to that tenant.",
       crm_workspace_link_contacts: "Contacts",
       crm_workspace_link_companies: "Companies",
+      brain_sandbox_title: "Brain sandbox",
+      brain_sandbox_subtitle:
+        "Exercise Chaster Brain against any customer tenant’s saved parameters, FAQs, documents, and runtime — the same stack their widget and portal use.",
+      brain_sandbox_tenant_card_title: "Tenant",
+      brain_sandbox_tenant_card_desc:
+        "Choose which company’s brain configuration and knowledge base to drive replies.",
+      brain_sandbox_tenant_label: "Customer tenant",
+      brain_sandbox_tenant_placeholder: "Select a tenant…",
+      brain_sandbox_no_tenants:
+        "No tenants in the directory yet. Add a company from the HQ dashboard first.",
+      brain_sandbox_chat_title: "Test conversation",
+      brain_sandbox_chat_desc:
+        "Messages call the live sandbox API. Assistant rows can show intent, confidence, and sources when the brain returns them.",
       workspace_back: "Back to HQ dashboard",
       hint_tenants_vs_companies:
         "Tip: rows here are platform tenants (customers you provision in HQ). The Companies tab lists CRM pipeline companies in the database — a separate table. Creating a tenant does not create a CRM company; add those under Companies if you use the sales CRM per tenant.",
@@ -1106,11 +1125,18 @@ export const englishCrmMessages = {
       nav_kb: "Knowledge base",
       nav_team: "Team",
       nav_messages: "Messages",
+      nav_sandbox: "Brain sandbox",
       nav_support: "Help & Support",
       messages_scope_hint:
         "Message anyone in your company under Direct messages. “From Chaster” is only for your super admin when HQ writes in.",
       nav_settings: "Portal settings",
       nav_subscription: "Subscription",
+      brain_sandbox_title: "Brain sandbox",
+      brain_sandbox_subtitle:
+        "Try questions against your organization’s Chaster Brain. Uses the same AI parameters, knowledge base, FAQs, and runtime as your live widget.",
+      brain_sandbox_chat_title: "Test conversation",
+      brain_sandbox_chat_desc:
+        "Replies reflect your current settings. Chat history is stored in this browser only (separate from customer chats).",
       nav_strip_title: "Portal pages",
       nav_strip_hint:
         "Open these sections anytime. On desktop, the same links appear in a second row under the main menu.",

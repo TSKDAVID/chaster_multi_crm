@@ -7,6 +7,7 @@ import {
   Home,
   MessageSquare,
   SlidersHorizontal,
+  TestTube2,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,13 @@ export function PortalQuickNav() {
           to="/portal/messages"
           label={translate("chaster.portal.nav_messages")}
           icon={MessageSquare}
+        />
+      ) : null}
+      {can("portal.view") ? (
+        <Item
+          to="/portal/brain-sandbox"
+          label={translate("chaster.portal.nav_sandbox")}
+          icon={TestTube2}
         />
       ) : null}
       <Item

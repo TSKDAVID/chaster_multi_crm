@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Home, ListTodo, Plus, Settings, Users } from "lucide-react";
+import { Home, ListTodo, Plus, Settings, TestTube2, Users } from "lucide-react";
 import { useTranslate } from "ra-core";
 import { Link, matchPath, useLocation, useMatch } from "react-router";
 import { useCurrentUserRole } from "../access/useCurrentUserRole";
@@ -158,6 +158,14 @@ const CreateButton = () => {
               <DropdownMenuItem className="h-12 px-4 text-base" asChild>
                 <Link to="/portal/team">{translate("chaster.portal.nav_team")}</Link>
               </DropdownMenuItem>
+              {can("portal.view") ? (
+                <DropdownMenuItem className="h-12 px-4 text-base" asChild>
+                  <Link to="/portal/brain-sandbox" className="flex items-center gap-2">
+                    <TestTube2 className="h-4 w-4 shrink-0 opacity-80" />
+                    {translate("chaster.portal.nav_sandbox")}
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem className="h-12 px-4 text-base" asChild>
                 <Link to="/portal/settings">
                   {translate("chaster.portal.nav_settings")}

@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Settings,
   Shield,
+  TestTube2,
   User,
   Users,
 } from "lucide-react";
@@ -75,6 +76,7 @@ const Header = () => {
   const portalKbActive = path.startsWith("/portal/knowledge-base");
   const portalTeamActive = path.startsWith("/portal/team");
   const portalSettingsActive = path.startsWith("/portal/settings");
+  const portalSandboxActive = path.startsWith("/portal/brain-sandbox");
   const portalSubActive = path.startsWith("/portal/subscription");
   const portalMessagesActive = path.startsWith("/portal/messages");
   const portalSupportActive = path.startsWith("/portal/support");
@@ -185,6 +187,13 @@ const Header = () => {
                       isActive={Boolean(matchPath("/hq/organizations", path))}
                     />
                   ) : null}
+                  {isOwnerSide && can("hq.view") ? (
+                    <NavigationTab
+                      label={translate("chaster.hq.menu_brain_sandbox")}
+                      to="/hq/brain-sandbox"
+                      isActive={Boolean(matchPath("/hq/brain-sandbox", path))}
+                    />
+                  ) : null}
                   {isOwnerSide && can("hq.support.cases.read") ? (
                     <NavigationTab
                       label={translate("chaster.hq.support.cases_title")}
@@ -264,6 +273,14 @@ const Header = () => {
                   isActive={portalSupportActive}
                   badge={supportPortalUnread.data ?? 0}
                   icon={CircleHelp}
+                />
+              ) : null}
+              {can("portal.view") ? (
+                <PortalNavLink
+                  to="/portal/brain-sandbox"
+                  label={translate("chaster.portal.nav_sandbox")}
+                  isActive={portalSandboxActive}
+                  icon={TestTube2}
                 />
               ) : null}
               <PortalNavLink
@@ -359,6 +376,14 @@ const UsersMenu = () => {
           <Link to="/hq/organizations" className="flex items-center gap-2">
             <Building2 className="h-4 w-4 shrink-0 opacity-80" />
             {translate("chaster.hq.menu_organizations")}
+          </Link>
+        </DropdownMenuItem>
+      ) : null}
+      {isOwnerSide ? (
+        <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+          <Link to="/hq/brain-sandbox" className="flex items-center gap-2">
+            <TestTube2 className="h-4 w-4 shrink-0 opacity-80" />
+            {translate("chaster.hq.menu_brain_sandbox")}
           </Link>
         </DropdownMenuItem>
       ) : null}

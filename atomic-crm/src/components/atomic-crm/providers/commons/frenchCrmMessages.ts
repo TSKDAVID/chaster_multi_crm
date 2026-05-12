@@ -613,6 +613,11 @@ export const frenchCrmMessages = {
       hq: "HQ",
       portal: "Portail",
     },
+    brain_sandbox: {
+      meta_intent: "Intention",
+      meta_confidence: "Confiance",
+      meta_sources: "Sources",
+    },
     hq: {
       title: "Chaster HQ",
       subtitle:
@@ -633,6 +638,7 @@ export const frenchCrmMessages = {
       open_messages: "Ouvrir les messages",
       menu_platform_team: "Équipe siège Chaster",
       menu_organizations: "Organisations internes",
+      menu_brain_sandbox: "Bac à sable cerveau",
       menu_crm_users: "Comptes utilisateurs CRM",
       organizations: {
         title: "Organisations internes",
@@ -786,6 +792,19 @@ export const frenchCrmMessages = {
         "Pour tester l’expérience portail, connectez-vous avec un compte de test rattaché à ce tenant.",
       crm_workspace_link_contacts: "Contacts",
       crm_workspace_link_companies: "Entreprises",
+      brain_sandbox_title: "Bac à sable cerveau",
+      brain_sandbox_subtitle:
+        "Testez Chaster Brain avec les paramètres, FAQ, documents et état d’exécution réels d’un tenant client — la même pile que le widget et le portail.",
+      brain_sandbox_tenant_card_title: "Tenant",
+      brain_sandbox_tenant_card_desc:
+        "Choisissez quelle entreprise pilote la configuration et la base de connaissances des réponses.",
+      brain_sandbox_tenant_label: "Tenant client",
+      brain_sandbox_tenant_placeholder: "Sélectionner un tenant…",
+      brain_sandbox_no_tenants:
+        "Aucun tenant dans l’annuaire. Créez d’abord une entreprise depuis le tableau de bord siège.",
+      brain_sandbox_chat_title: "Conversation de test",
+      brain_sandbox_chat_desc:
+        "Les messages appellent l’API bac à sable. Les réponses peuvent afficher intention, confiance et sources lorsque le cerveau les renvoie.",
       workspace_back: "Retour au tableau de bord HQ",
       hint_tenants_vs_companies:
         "Astuce : chaque ligne est un tenant plateforme (client provisionné au siège). L’onglet Entreprises liste les sociétés du CRM — table distincte. Créer un tenant ne crée pas une fiche Entreprise CRM ; ajoutez-la dans Entreprises si vous utilisez le CRM commercial par tenant.",
@@ -1121,11 +1140,18 @@ export const frenchCrmMessages = {
       nav_kb: "Base de connaissances",
       nav_team: "Équipe",
       nav_messages: "Messages",
+      nav_sandbox: "Bac à sable cerveau",
       nav_support: "Aide et support",
       messages_scope_hint:
         "Écrivez à n’importe qui de votre entreprise dans Messages directs. « De Chaster » est réservé au super admin lorsque le HQ écrit.",
       nav_settings: "Paramètres portail",
       nav_subscription: "Abonnement",
+      brain_sandbox_title: "Bac à sable cerveau",
+      brain_sandbox_subtitle:
+        "Posez des questions à Chaster Brain pour votre organisation. Utilise les mêmes paramètres IA, base de connaissances, FAQ et exécution que le widget en production.",
+      brain_sandbox_chat_title: "Conversation de test",
+      brain_sandbox_chat_desc:
+        "Les réponses reflètent vos réglages actuels. L’historique reste dans ce navigateur uniquement (séparé des chats clients).",
       nav_strip_title: "Pages du portail",
       nav_strip_hint:
         "Accédez à ces sections à tout moment. Sur ordinateur, les mêmes liens sont sous le menu principal.",

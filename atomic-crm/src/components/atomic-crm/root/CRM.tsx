@@ -68,6 +68,7 @@ import { PortalHomePage } from "../portal/PortalHomePage";
 import { PortalKnowledgeBasePage } from "../portal/PortalKnowledgeBasePage";
 import { PortalSubscriptionPage } from "../portal/PortalSubscriptionPage";
 import { PortalTeamPage } from "../portal/PortalTeamPage";
+import { PortalBrainSandboxPage } from "../portal/PortalBrainSandboxPage";
 import { PortalTenantSettingsPage } from "../portal/PortalTenantSettingsPage";
 import { PortalMessagesPage } from "../portal/PortalMessagesPage";
 import { PortalSupportPage } from "../portal/PortalSupportPage";
@@ -78,6 +79,7 @@ import { HqSupportCaseDetailPage } from "../hq/HqSupportCaseDetailPage";
 import { HqSupportFaqsPage } from "../hq/HqSupportFaqsPage";
 import { HqPlatformTeamPage } from "../hq/HqPlatformTeamPage";
 import { HqOrganizationsPage } from "../hq/HqOrganizationsPage";
+import { HqBrainSandboxPage } from "../hq/HqBrainSandboxPage";
 import { LandingTestPage } from "../public-test/LandingTestPage";
 import { CheckoutTestPage } from "../public-test/CheckoutTestPage";
 import { CheckoutSuccessPage } from "../public-test/CheckoutSuccessPage";
@@ -360,6 +362,7 @@ const DesktopAdmin = (
           path="/hq/organizations"
           element={<HqOrganizationsPage />}
         />
+        <Route path="/hq/brain-sandbox" element={<HqBrainSandboxPage />} />
         <Route path="/portal" element={<PortalHomePage />} />
         <Route
           path="/portal/knowledge-base"
@@ -370,6 +373,7 @@ const DesktopAdmin = (
           path="/portal/settings"
           element={<PortalTenantSettingsPage />}
         />
+        <Route path="/portal/brain-sandbox" element={<PortalBrainSandboxPage />} />
         <Route
           path="/portal/subscription"
           element={<PortalSubscriptionPage />}
@@ -496,6 +500,7 @@ const MobileAdmin = (
             path="/hq/organizations"
             element={<HqOrganizationsPage />}
           />
+          <Route path="/hq/brain-sandbox" element={<HqBrainSandboxPage />} />
           <Route path="/portal" element={<PortalHomePage />} />
           <Route
             path="/portal/knowledge-base"
@@ -507,6 +512,7 @@ const MobileAdmin = (
             path="/portal/settings"
             element={<PortalTenantSettingsPage />}
           />
+          <Route path="/portal/brain-sandbox" element={<PortalBrainSandboxPage />} />
           <Route
             path="/portal/subscription"
             element={<PortalSubscriptionPage />}

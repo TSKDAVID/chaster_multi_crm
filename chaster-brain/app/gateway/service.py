@@ -29,7 +29,12 @@ def _tenant_matches_jwt(claims: dict, request_tenant_id: str) -> bool:
         "tenant_id",
         {"user_id": sub, "tenant_id": request_tenant_id},
     )
-    return row is not None
+    if row is not None:
+        return True
+
+    # Chaster HQ platform team: control-plane tools (sandbox, stats, indexing) for any tenant.
+    staff = get_single_row("chaster_team", "id", {"user_id": sub})
+    return staff is not None
 
 
 def validate_app_request_signature(
