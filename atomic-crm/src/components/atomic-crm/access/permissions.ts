@@ -172,6 +172,13 @@ export function canPermission(
           r === "hq_ops_admin" ||
           r === "hq_support_lead"
         );
+      /** Internal HQ divisions (/hq/organizations) — structure support & ops teams. */
+      case "hq.organizations.manage":
+        return (
+          r === "hq_owner" ||
+          r === "hq_ops_admin" ||
+          r === "hq_support_lead"
+        );
       case "crm.use":
         return true;
       default:

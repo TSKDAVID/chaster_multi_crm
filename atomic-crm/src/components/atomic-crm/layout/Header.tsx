@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { useEffect } from "react";
 import {
+  Building2,
   CircleHelp,
   Import,
   MessageSquare,
@@ -177,6 +178,13 @@ const Header = () => {
                       isActive={Boolean(matchPath("/hq/platform-team", path))}
                     />
                   ) : null}
+                  {isOwnerSide ? (
+                    <NavigationTab
+                      label={translate("chaster.hq.menu_organizations")}
+                      to="/hq/organizations"
+                      isActive={Boolean(matchPath("/hq/organizations", path))}
+                    />
+                  ) : null}
                   {isOwnerSide && can("hq.support.cases.read") ? (
                     <NavigationTab
                       label={translate("chaster.hq.support.cases_title")}
@@ -343,6 +351,14 @@ const UsersMenu = () => {
           <Link to="/hq/platform-team" className="flex items-center gap-2">
             <Shield className="h-4 w-4 shrink-0 opacity-80" />
             {translate("chaster.hq.menu_platform_team")}
+          </Link>
+        </DropdownMenuItem>
+      ) : null}
+      {isOwnerSide ? (
+        <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+          <Link to="/hq/organizations" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 shrink-0 opacity-80" />
+            {translate("chaster.hq.menu_organizations")}
           </Link>
         </DropdownMenuItem>
       ) : null}

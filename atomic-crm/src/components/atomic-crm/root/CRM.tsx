@@ -79,6 +79,7 @@ import { HqSupportFaqsPage } from "../hq/HqSupportFaqsPage";
 import { HqWorkspaceTeamPage } from "../hq/HqWorkspaceTeamPage";
 import { HqWorkspaceKnowledgeBasePage } from "../hq/HqWorkspaceKnowledgeBasePage";
 import { HqPlatformTeamPage } from "../hq/HqPlatformTeamPage";
+import { HqOrganizationsPage } from "../hq/HqOrganizationsPage";
 import { LandingTestPage } from "../public-test/LandingTestPage";
 import { CheckoutTestPage } from "../public-test/CheckoutTestPage";
 import { CheckoutSuccessPage } from "../public-test/CheckoutSuccessPage";
@@ -359,6 +360,10 @@ const DesktopAdmin = (
           element={<HqPlatformTeamPage />}
         />
         <Route
+          path="/hq/organizations"
+          element={<HqOrganizationsPage />}
+        />
+        <Route
           path="/hq/workspace/knowledge-base"
           element={<HqWorkspaceKnowledgeBasePage />}
         />
@@ -494,6 +499,10 @@ const MobileAdmin = (
           <Route
             path="/hq/platform-team"
             element={<HqPlatformTeamPage />}
+          />
+          <Route
+            path="/hq/organizations"
+            element={<HqOrganizationsPage />}
           />
           <Route
             path="/hq/workspace/knowledge-base"
