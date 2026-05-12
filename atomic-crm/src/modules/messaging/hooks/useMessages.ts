@@ -108,7 +108,7 @@ export function useMessages(conversationId: string | null) {
                   m._local === "sending" &&
                   m.sender_id === row.sender_id &&
                   m.body === row.body &&
-                  m.conversation_id === row.conversation_id,
+                  m.conversation_id === row.conversation_id
                 ),
             );
             return dedupeMessagesById([...stripped, row]);
