@@ -585,6 +585,26 @@ export const frenchCrmMessages = {
     access: {
       hq_denied: "Vous n'avez pas accès à Chaster HQ.",
     },
+    sales: {
+      create: {
+        provision_title: "Provisionnement (optionnel)",
+        provision_desc:
+          "Invitez dans une entreprise cliente, ajoutez à l’équipe plateforme HQ, ou laissez vide pour un utilisateur CRM classique. Équipe HQ et invitation client ne peuvent pas être combinées en une étape.",
+        tenant_none: "— Pas d’invitation client —",
+        hq_role_none: "— Pas dans l’équipe plateforme HQ —",
+        hq_role_label: "Équipe plateforme Chaster HQ",
+        client_tenant_label: "Entreprise cliente (tenant)",
+        client_role_label: "Son rôle dans cette entreprise",
+        role_workspace_viewer: "Lecteur",
+        role_workspace_member: "Membre",
+        role_workspace_manager: "Manager",
+        role_workspace_admin: "Admin",
+        role_workspace_owner: "Propriétaire",
+        hq_support_lead: "Responsable support",
+        hq_developer: "Développeur",
+        hq_analyst: "Analyste",
+      },
+    },
     home: {
       no_organization:
         "Aucune organisation n'est liée à ce compte pour le moment. Contactez le support si vous venez de finaliser le paiement.",
@@ -717,8 +737,11 @@ export const frenchCrmMessages = {
       platform_team_col_added: "Ajouté",
       platform_team_col_actions: "Actions",
       platform_team_role_staff: "Staff",
+      platform_team_role_support_lead: "Responsable support",
       platform_team_role_admin: "Admin HQ",
       platform_team_role_super_admin: "Super admin HQ",
+      platform_team_role_developer: "Développeur",
+      platform_team_role_analyst: "Analyste",
       platform_team_add_member: "Ajouter à l’équipe HQ",
       platform_team_remove: "Retirer",
       platform_team_remove_confirm:
@@ -728,14 +751,27 @@ export const frenchCrmMessages = {
       platform_team_removed: "Retiré de l’équipe HQ.",
       platform_team_added: "Ajouté à l’équipe HQ.",
       platform_team_empty:
-        "Aucun membre d’équipe siège pour l’instant. Ajoutez des utilisateurs depuis les comptes CRM (connexion requise d’abord).",
+        "Aucun membre d’équipe siège pour l’instant. Utilisez « Inviter par e-mail » pour tout faire en une étape, ou ajoutez un utilisateur CRM existant.",
       platform_team_no_profile: "Pas de profil CRM",
       platform_team_related_title: "Liens utiles",
       platform_team_related_desc:
-        "Invitez les connexions CRM dans Comptes utilisateurs. Gérez les membres des clients depuis chaque entreprise dans le tableau ci-dessus.",
+        "Créez ou gérez les connexions CRM dans Comptes utilisateurs. Gérez les membres des clients depuis chaque entreprise dans le tableau ci-dessus.",
       platform_team_add_dialog_title: "Ajouter à l’équipe siège Chaster",
       platform_team_add_dialog_desc:
-        "Choisissez un utilisateur qui a déjà un compte CRM (auth + ligne sales). Il recevra l’accès Chaster HQ au rôle choisi.",
+        "Invitez une nouvelle personne (e-mail + accès HQ en une fois) ou donnez l’accès HQ à quelqu’un qui a déjà une connexion CRM.",
+      platform_team_add_tab_invite: "Inviter par e-mail",
+      platform_team_add_tab_existing: "Utilisateur CRM existant",
+      platform_team_invite_desc:
+        "Crée son compte CRM et l’ajoute à cette liste HQ. Un e-mail lui permet d’accepter et de définir un mot de passe.",
+      platform_team_invite_first: "Prénom",
+      platform_team_invite_last: "Nom",
+      platform_team_invite_email: "E-mail",
+      platform_team_invite_crm_admin: "Administrateur CRM",
+      platform_team_invite_crm_admin_hint:
+        "Activé pour le staff qui utilise tout le CRM. Désactivez pour un compte non-admin.",
+      platform_team_invite_submit: "Envoyer l’invitation",
+      platform_team_invite_success:
+        "Invitation envoyée. La personne a été ajoutée à l’équipe HQ et peut finaliser depuis l’e-mail.",
       platform_team_add_pick_user: "Utilisateur",
       platform_team_add_placeholder: "Sélectionner un utilisateur…",
       platform_team_add_no_candidates:

@@ -578,6 +578,26 @@ export const englishCrmMessages = {
     access: {
       hq_denied: "You do not have access to Chaster HQ.",
     },
+    sales: {
+      create: {
+        provision_title: "Provisioning (optional)",
+        provision_desc:
+          "Invite someone into a client company, add them to the Chaster HQ platform team, or leave both blank for a normal CRM user only. HQ team and client invite cannot be combined in one step.",
+        tenant_none: "— Not a client invite —",
+        hq_role_none: "— Not on HQ platform team —",
+        hq_role_label: "Chaster HQ platform team",
+        client_tenant_label: "Client company (tenant)",
+        client_role_label: "Their role in that company",
+        role_workspace_viewer: "Viewer",
+        role_workspace_member: "Member",
+        role_workspace_manager: "Manager",
+        role_workspace_admin: "Admin",
+        role_workspace_owner: "Owner",
+        hq_support_lead: "Support lead",
+        hq_developer: "Developer",
+        hq_analyst: "Analyst",
+      },
+    },
     home: {
       no_organization:
         "No organization is linked to this account yet. Contact support if you just completed checkout.",
@@ -710,8 +730,11 @@ export const englishCrmMessages = {
       platform_team_col_added: "Added",
       platform_team_col_actions: "Actions",
       platform_team_role_staff: "Staff",
+      platform_team_role_support_lead: "Support lead",
       platform_team_role_admin: "HQ admin",
       platform_team_role_super_admin: "HQ super admin",
+      platform_team_role_developer: "Developer",
+      platform_team_role_analyst: "Analyst",
       platform_team_add_member: "Add to HQ team",
       platform_team_remove: "Remove",
       platform_team_remove_confirm:
@@ -720,14 +743,28 @@ export const englishCrmMessages = {
       platform_team_role_updated: "Role updated.",
       platform_team_removed: "Removed from HQ team.",
       platform_team_added: "Added to HQ team.",
-      platform_team_empty: "No Chaster HQ team members yet. Add users from CRM accounts (they need a login first).",
+      platform_team_empty:
+        "No Chaster HQ team members yet. Use “Invite by email” to add someone in one step, or add an existing CRM user.",
       platform_team_no_profile: "No CRM profile",
       platform_team_related_title: "Related",
       platform_team_related_desc:
-        "Invite CRM logins under User accounts. Manage client companies’ members from each company in the directory above.",
+        "Create or manage CRM logins under User accounts. Manage client companies’ members from each company in the directory above.",
       platform_team_add_dialog_title: "Add to Chaster HQ team",
       platform_team_add_dialog_desc:
-        "Pick a user who already has a CRM account (auth + sales row). They will gain Chaster HQ access at the role you choose.",
+        "Invite someone new (they get an email and join the HQ team at once) or attach HQ access to someone who already has a CRM login.",
+      platform_team_add_tab_invite: "Invite by email",
+      platform_team_add_tab_existing: "Existing CRM user",
+      platform_team_invite_desc:
+        "Creates their CRM account and adds them to this HQ roster. They receive an email to accept access and set a password.",
+      platform_team_invite_first: "First name",
+      platform_team_invite_last: "Last name",
+      platform_team_invite_email: "Email",
+      platform_team_invite_crm_admin: "CRM administrator",
+      platform_team_invite_crm_admin_hint:
+        "Turn on for staff who need full CRM tools. Turn off for a non-admin login.",
+      platform_team_invite_submit: "Send invite",
+      platform_team_invite_success:
+        "Invitation sent. They were added to the HQ team and can finish setup from the email.",
       platform_team_add_pick_user: "User",
       platform_team_add_placeholder: "Select a user…",
       platform_team_add_no_candidates:

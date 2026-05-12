@@ -178,7 +178,48 @@ type InviteUserBody = {
   administrator?: boolean;
   tenant_id?: string;
   tenant_member_role?: string;
+  /** When set, add to `chaster_team` after invite/create (HQ owner / legacy super_admin only). */
+  chaster_team_role?: string;
 };
+
+function normalizeHqPlatformRole(
+  raw: string | undefined | null,
+): string | null {
+  const r = String(raw ?? "").trim();
+  const allowed = new Set([
+    "hq_owner",
+    "hq_ops_admin",
+    "hq_support_lead",
+    "hq_support_agent",
+    "hq_developer",
+    "hq_analyst",
+  ]);
+  if (allowed.has(r)) return r;
+  if (r === "super_admin") return "hq_owner";
+  if (r === "admin") return "hq_ops_admin";
+  if (r === "staff") return "hq_support_agent";
+  return null;
+}
+
+async function insertChasterTeamMemberForNewUser(
+  userId: string,
+  role: string,
+): Promise<void> {
+  const { data: dupe, error: selErr } = await supabaseAdmin
+    .from("chaster_team")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (selErr) throw selErr;
+  if (dupe) {
+    throw new Error("User is already on the Chaster HQ team.");
+  }
+  const { error } = await supabaseAdmin.from("chaster_team").insert({
+    user_id: userId,
+    role,
+  });
+  if (error) throw error;
+}
 
 async function inviteUser(body: InviteUserBody, currentUserSale: any) {
   const {
@@ -190,10 +231,36 @@ async function inviteUser(body: InviteUserBody, currentUserSale: any) {
     administrator,
     tenant_id,
     tenant_member_role,
+    chaster_team_role,
   } = body;
 
-  if (!currentUserSale.administrator) {
+  const callerHqRole = await getChasterTeamRole(currentUserSale.user_id);
+  const isHqSuper =
+    callerHqRole === "hq_owner" || callerHqRole === "super_admin";
+
+  if (!currentUserSale.administrator && !isHqSuper) {
     return createErrorResponse(401, "Not Authorized");
+  }
+
+  const tidRaw =
+    tenant_id != null && String(tenant_id).trim() !== ""
+      ? String(tenant_id).trim()
+      : "";
+  const hqRoleRaw = normalizeHqPlatformRole(chaster_team_role);
+  if (hqRoleRaw && tidRaw) {
+    return createErrorResponse(
+      400,
+      "Choose either HQ team membership or a client tenant invite, not both.",
+    );
+  }
+  if (chaster_team_role != null && String(chaster_team_role).trim() !== "" && !hqRoleRaw) {
+    return createErrorResponse(400, "Invalid chaster_team_role");
+  }
+  if (hqRoleRaw && !isHqSuper) {
+    return createErrorResponse(
+      403,
+      "Only Chaster HQ owners can assign HQ team membership when inviting.",
+    );
   }
 
   if (typeof email !== "string" || email.trim() === "") {
@@ -214,11 +281,7 @@ async function inviteUser(body: InviteUserBody, currentUserSale: any) {
       last_name: ln,
     };
 
-    const tid =
-      tenant_id != null && String(tenant_id).trim() !== ""
-        ? String(tenant_id).trim()
-        : "";
-    if (tid) {
+    if (tidRaw) {
       if (!(await isChasterStaffUser(currentUserSale.user_id))) {
         return createErrorResponse(
           403,
@@ -227,12 +290,12 @@ async function inviteUser(body: InviteUserBody, currentUserSale: any) {
       }
       const uuidRe =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRe.test(tid)) {
+      if (!uuidRe.test(tidRaw)) {
         return createErrorResponse(400, "tenant_id must be a valid UUID");
       }
       const roleRaw = String(tenant_member_role ?? "workspace_member").trim();
       const role = normalizeTenantMemberRole(roleRaw);
-      inviteData.provisioned_tenant_id = tid;
+      inviteData.provisioned_tenant_id = tidRaw;
       inviteData.provisioned_tenant_role = role;
     }
 
@@ -272,6 +335,17 @@ async function inviteUser(body: InviteUserBody, currentUserSale: any) {
 
     try {
       const sale = await patchSaleRoles(user.id, dis, admin);
+      if (hqRoleRaw) {
+        try {
+          await insertChasterTeamMemberForNewUser(user.id, hqRoleRaw);
+        } catch (hqErr) {
+          console.error("chaster_team insert after invite:", hqErr);
+          return createErrorResponse(
+            400,
+            (hqErr as Error).message || "Could not add user to HQ team.",
+          );
+        }
+      }
       return new Response(
         JSON.stringify({
           data: sale,
@@ -325,6 +399,17 @@ async function inviteUser(body: InviteUserBody, currentUserSale: any) {
 
   try {
     const sale = await patchSaleRoles(user.id, dis, admin);
+    if (hqRoleRaw) {
+      try {
+        await insertChasterTeamMemberForNewUser(user.id, hqRoleRaw);
+      } catch (hqErr) {
+        console.error("chaster_team insert after createUser:", hqErr);
+        return createErrorResponse(
+          400,
+          (hqErr as Error).message || "Could not add user to HQ team.",
+        );
+      }
+    }
     return new Response(
       JSON.stringify({
         data: sale,

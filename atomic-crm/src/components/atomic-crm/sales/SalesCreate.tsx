@@ -7,6 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CrmDataProvider } from "../providers/types";
 import type { SalesFormData } from "../types";
 import { SalesInputs } from "./SalesInputs";
+import { SalesProvisioningInputs } from "./SalesProvisioningInputs";
+
+function sanitizeSalesPayload(data: SalesFormData): SalesFormData {
+  const tenantId = data.tenant_id?.trim() ? data.tenant_id.trim() : undefined;
+  const hqRole = data.chaster_team_role?.trim()
+    ? data.chaster_team_role.trim()
+    : undefined;
+  if (tenantId && hqRole) {
+    throw new Error(
+      "Choose either HQ team membership or a client company invite, not both.",
+    );
+  }
+  return {
+    ...data,
+    tenant_id: tenantId,
+    chaster_team_role: hqRole,
+    tenant_member_role: tenantId ? data.tenant_member_role : undefined,
+  };
+}
 
 export function SalesCreate() {
   const dataProvider = useDataProvider<CrmDataProvider>();
@@ -17,7 +36,7 @@ export function SalesCreate() {
   const { mutate } = useMutation({
     mutationKey: ["signup"],
     mutationFn: async (data: SalesFormData) => {
-      return dataProvider.salesCreate(data);
+      return dataProvider.salesCreate(sanitizeSalesPayload(data));
     },
     onSuccess: (result) => {
       const invited =
@@ -69,8 +88,22 @@ export function SalesCreate() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <SimpleForm onSubmit={onSubmit as SubmitHandler<any>}>
+          <SimpleForm
+            onSubmit={onSubmit as SubmitHandler<any>}
+            defaultValues={{
+              email: "",
+              password: "",
+              first_name: "",
+              last_name: "",
+              administrator: false,
+              disabled: false,
+              tenant_id: "",
+              tenant_member_role: "workspace_member",
+              chaster_team_role: "",
+            }}
+          >
             <SalesInputs />
+            <SalesProvisioningInputs />
           </SimpleForm>
         </CardContent>
       </Card>

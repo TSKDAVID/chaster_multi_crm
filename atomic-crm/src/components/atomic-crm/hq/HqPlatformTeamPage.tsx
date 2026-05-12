@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
 import { Link } from "react-router";
 import { ArrowLeft, Shield, UserPlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChasterHQGuard } from "../access/ChasterHQGuard";
 import { PermissionGate } from "../access/PermissionGate";
 import { useAuthUserId } from "../access/useAuthUserId";
@@ -41,6 +41,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import type { Sale } from "../types";
 
 export const HqPlatformTeamPath = "/hq/platform-team";
 
@@ -100,6 +105,22 @@ function HqPlatformTeamPageInner() {
   const [addOpen, setAddOpen] = useState(false);
   const [pickUserId, setPickUserId] = useState<string | null>(null);
   const [pickRole, setPickRole] = useState<PlatformRole>("hq_support_agent");
+  const [addTab, setAddTab] = useState<"invite" | "existing">("invite");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteFirstName, setInviteFirstName] = useState("");
+  const [inviteLastName, setInviteLastName] = useState("");
+  const [inviteCrmAdmin, setInviteCrmAdmin] = useState(true);
+
+  useEffect(() => {
+    if (!addOpen) return;
+    setAddTab("invite");
+    setPickUserId(null);
+    setPickRole("hq_support_agent");
+    setInviteEmail("");
+    setInviteFirstName("");
+    setInviteLastName("");
+    setInviteCrmAdmin(true);
+  }, [addOpen]);
 
   const teamQuery = useQuery({
     queryKey: ["hq-chaster-platform-team"],
@@ -160,7 +181,7 @@ function HqPlatformTeamPageInner() {
       );
       return out;
     },
-    enabled: addOpen && canManage,
+    enabled: addOpen && canManage && addTab === "existing",
   });
 
   const updateRoleMut = useMutation({
@@ -204,6 +225,63 @@ function HqPlatformTeamPageInner() {
       });
       await queryClient.invalidateQueries({ queryKey: ["chaster-access"] });
       notify(translate("chaster.hq.platform_team_removed"), { type: "success" });
+    },
+    onError: (e: Error) => {
+      notify(e.message, { type: "error" });
+    },
+  });
+
+  const inviteMut = useMutation({
+    mutationFn: async () => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.functions.invoke<{
+        data: Sale;
+        invite_email_sent?: boolean;
+      }>("users", {
+        method: "POST",
+        body: {
+          email: inviteEmail.trim(),
+          first_name: inviteFirstName.trim() || "Pending",
+          last_name: inviteLastName.trim() || "Pending",
+          disabled: false,
+          administrator: inviteCrmAdmin,
+          chaster_team_role: pickRole,
+        },
+      });
+
+      if (!data || error) {
+        const errorDetails = await (async () => {
+          try {
+            return (await error?.context?.json()) ?? {};
+          } catch {
+            return {};
+          }
+        })();
+        const msg =
+          (typeof errorDetails?.message === "string" && errorDetails.message) ||
+          (error as Error)?.message ||
+          "Failed to invite user";
+        throw new Error(msg);
+      }
+      if (!data.data) {
+        throw new Error("Failed to invite user");
+      }
+      return data;
+    },
+    onSuccess: async (res) => {
+      setAddOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["hq-chaster-platform-team"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["hq-chaster-platform-team-candidates"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["chaster-access"] });
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+      notify(
+        res.invite_email_sent
+          ? translate("chaster.hq.platform_team_invite_success")
+          : translate("chaster.hq.platform_team_added"),
+        { type: "success" },
+      );
     },
     onError: (e: Error) => {
       notify(e.message, { type: "error" });
@@ -345,7 +423,7 @@ function HqPlatformTeamPageInner() {
                                 {translate("chaster.hq.platform_team_role_staff")}
                               </SelectItem>
                               <SelectItem value="hq_support_lead">
-                                Support lead
+                                {translate("chaster.hq.platform_team_role_support_lead")}
                               </SelectItem>
                               <SelectItem value="hq_ops_admin">
                                 {translate("chaster.hq.platform_team_role_admin")}
@@ -355,8 +433,12 @@ function HqPlatformTeamPageInner() {
                                   "chaster.hq.platform_team_role_super_admin",
                                 )}
                               </SelectItem>
-                              <SelectItem value="hq_developer">Developer</SelectItem>
-                              <SelectItem value="hq_analyst">Analyst</SelectItem>
+                              <SelectItem value="hq_developer">
+                                {translate("chaster.hq.platform_team_role_developer")}
+                              </SelectItem>
+                              <SelectItem value="hq_analyst">
+                                {translate("chaster.hq.platform_team_role_analyst")}
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -421,7 +503,12 @@ function HqPlatformTeamPageInner() {
         </CardContent>
       </Card>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{translate("chaster.hq.platform_team_add_dialog_title")}</DialogTitle>
@@ -429,84 +516,201 @@ function HqPlatformTeamPageInner() {
               {translate("chaster.hq.platform_team_add_dialog_desc")}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>{translate("chaster.hq.platform_team_add_pick_user")}</Label>
-              {candidatesQuery.isPending ? (
-                <Skeleton className="h-9 w-full" />
-              ) : (candidatesQuery.data ?? []).length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  {translate("chaster.hq.platform_team_add_no_candidates")}
-                </p>
-              ) : (
+          <Tabs
+            value={addTab}
+            onValueChange={(v) => setAddTab(v as "invite" | "existing")}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="invite">
+                {translate("chaster.hq.platform_team_add_tab_invite")}
+              </TabsTrigger>
+              <TabsTrigger value="existing">
+                {translate("chaster.hq.platform_team_add_tab_existing")}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="invite" className="space-y-4 pt-3">
+              <p className="text-muted-foreground text-sm">
+                {translate("chaster.hq.platform_team_invite_desc")}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="hq-invite-first">
+                    {translate("chaster.hq.platform_team_invite_first")}
+                  </Label>
+                  <Input
+                    id="hq-invite-first"
+                    value={inviteFirstName}
+                    onChange={(e) => setInviteFirstName(e.target.value)}
+                    autoComplete="given-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hq-invite-last">
+                    {translate("chaster.hq.platform_team_invite_last")}
+                  </Label>
+                  <Input
+                    id="hq-invite-last"
+                    value={inviteLastName}
+                    onChange={(e) => setInviteLastName(e.target.value)}
+                    autoComplete="family-name"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hq-invite-email">
+                  {translate("chaster.hq.platform_team_invite_email")}
+                </Label>
+                <Input
+                  id="hq-invite-email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{translate("chaster.hq.platform_team_col_role")}</Label>
                 <Select
-                  value={pickUserId ?? ""}
-                  onValueChange={(v) => setPickUserId(v || null)}
+                  value={pickRole}
+                  onValueChange={(v) => {
+                    if (isPlatformRole(v)) setPickRole(v);
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue
-                      placeholder={translate(
-                        "chaster.hq.platform_team_add_placeholder",
-                      )}
-                    />
+                    <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {(candidatesQuery.data ?? []).map((s) => (
-                      <SelectItem key={s.id} value={s.user_id!}>
-                        {(s.email ?? s.user_id) +
-                          (s.first_name || s.last_name
-                            ? ` (${[s.first_name, s.last_name].filter(Boolean).join(" ")})`
-                            : "")}
-                      </SelectItem>
-                    ))}
+                  <SelectContent>
+                    <SelectItem value="hq_support_agent">
+                      {translate("chaster.hq.platform_team_role_staff")}
+                    </SelectItem>
+                    <SelectItem value="hq_support_lead">
+                      {translate("chaster.hq.platform_team_role_support_lead")}
+                    </SelectItem>
+                    <SelectItem value="hq_ops_admin">
+                      {translate("chaster.hq.platform_team_role_admin")}
+                    </SelectItem>
+                    <SelectItem value="hq_owner">
+                      {translate("chaster.hq.platform_team_role_super_admin")}
+                    </SelectItem>
+                    <SelectItem value="hq_developer">
+                      {translate("chaster.hq.platform_team_role_developer")}
+                    </SelectItem>
+                    <SelectItem value="hq_analyst">
+                      {translate("chaster.hq.platform_team_role_analyst")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>{translate("chaster.hq.platform_team_col_role")}</Label>
-              <Select
-                value={pickRole}
-                onValueChange={(v) => {
-                  if (isPlatformRole(v)) setPickRole(v);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hq_support_agent">
-                    {translate("chaster.hq.platform_team_role_staff")}
-                  </SelectItem>
-                  <SelectItem value="hq_support_lead">
-                    Support lead
-                  </SelectItem>
-                  <SelectItem value="hq_ops_admin">
-                    {translate("chaster.hq.platform_team_role_admin")}
-                  </SelectItem>
-                  <SelectItem value="hq_owner">
-                    {translate("chaster.hq.platform_team_role_super_admin")}
-                  </SelectItem>
-                  <SelectItem value="hq_developer">Developer</SelectItem>
-                  <SelectItem value="hq_analyst">Analyst</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
+              </div>
+              <div className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  id="hq-invite-admin"
+                  checked={inviteCrmAdmin}
+                  onCheckedChange={(c) => setInviteCrmAdmin(c === true)}
+                />
+                <div className="grid gap-1">
+                  <Label htmlFor="hq-invite-admin" className="font-normal leading-tight">
+                    {translate("chaster.hq.platform_team_invite_crm_admin")}
+                  </Label>
+                  <p className="text-muted-foreground text-xs leading-snug">
+                    {translate("chaster.hq.platform_team_invite_crm_admin_hint")}
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="existing" className="space-y-4 pt-3">
+              <div className="space-y-2">
+                <Label>{translate("chaster.hq.platform_team_add_pick_user")}</Label>
+                {candidatesQuery.isPending ? (
+                  <Skeleton className="h-9 w-full" />
+                ) : (candidatesQuery.data ?? []).length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    {translate("chaster.hq.platform_team_add_no_candidates")}
+                  </p>
+                ) : (
+                  <Select
+                    value={pickUserId ?? ""}
+                    onValueChange={(v) => setPickUserId(v || null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={translate(
+                          "chaster.hq.platform_team_add_placeholder",
+                        )}
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {(candidatesQuery.data ?? []).map((s) => (
+                        <SelectItem key={s.id} value={s.user_id!}>
+                          {(s.email ?? s.user_id) +
+                            (s.first_name || s.last_name
+                              ? ` (${[s.first_name, s.last_name].filter(Boolean).join(" ")})`
+                              : "")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>{translate("chaster.hq.platform_team_col_role")}</Label>
+                <Select
+                  value={pickRole}
+                  onValueChange={(v) => {
+                    if (isPlatformRole(v)) setPickRole(v);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hq_support_agent">
+                      {translate("chaster.hq.platform_team_role_staff")}
+                    </SelectItem>
+                    <SelectItem value="hq_support_lead">
+                      {translate("chaster.hq.platform_team_role_support_lead")}
+                    </SelectItem>
+                    <SelectItem value="hq_ops_admin">
+                      {translate("chaster.hq.platform_team_role_admin")}
+                    </SelectItem>
+                    <SelectItem value="hq_owner">
+                      {translate("chaster.hq.platform_team_role_super_admin")}
+                    </SelectItem>
+                    <SelectItem value="hq_developer">
+                      {translate("chaster.hq.platform_team_role_developer")}
+                    </SelectItem>
+                    <SelectItem value="hq_analyst">
+                      {translate("chaster.hq.platform_team_role_analyst")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+          </Tabs>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
               {translate("chaster.hq.status_change_cancel")}
             </Button>
-            <Button
-              type="button"
-              disabled={!pickUserId || addMut.isPending}
-              onClick={() => {
-                if (!pickUserId) return;
-                addMut.mutate({ user_id: pickUserId, role: pickRole });
-              }}
-            >
-              {translate("chaster.hq.platform_team_add_submit")}
-            </Button>
+            {addTab === "invite" ? (
+              <Button
+                type="button"
+                disabled={!inviteEmail.trim() || inviteMut.isPending}
+                onClick={() => inviteMut.mutate()}
+              >
+                {translate("chaster.hq.platform_team_invite_submit")}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={!pickUserId || addMut.isPending}
+                onClick={() => {
+                  if (!pickUserId) return;
+                  addMut.mutate({ user_id: pickUserId, role: pickRole });
+                }}
+              >
+                {translate("chaster.hq.platform_team_add_submit")}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -524,11 +728,11 @@ function roleLabel(
     case "hq_ops_admin":
       return translate("chaster.hq.platform_team_role_admin");
     case "hq_support_lead":
-      return "Support lead";
+      return translate("chaster.hq.platform_team_role_support_lead");
     case "hq_developer":
-      return "Developer";
+      return translate("chaster.hq.platform_team_role_developer");
     case "hq_analyst":
-      return "Analyst";
+      return translate("chaster.hq.platform_team_role_analyst");
     case "hq_support_agent":
       return translate("chaster.hq.platform_team_role_staff");
     default:

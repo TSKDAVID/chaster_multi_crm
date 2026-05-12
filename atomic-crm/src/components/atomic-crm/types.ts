@@ -26,7 +26,9 @@ export type SalesFormData = {
   disabled: boolean;
   /** Chaster HQ only: invite into this client tenant (caller must be in chaster_team). */
   tenant_id?: string;
-  tenant_member_role?: "super_admin" | "admin" | "member";
+  tenant_member_role?: string;
+  /** Chaster HQ owner only: add to platform team when inviting (edge function). */
+  chaster_team_role?: string;
 };
 
 export type Sale = {
