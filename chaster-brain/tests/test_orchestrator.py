@@ -128,3 +128,30 @@ def test_faq_keeps_llm_answer_when_retrieval_is_weak(monkeypatch):
     assert result["intent"] == "faq_or_general"
     assert result["response"] == "Friendly FAQ reply"
     assert "verified context" not in result["response"].lower()
+
+
+def test_confidence_without_sources_reflects_intent_not_constant():
+    """Thin FAQ path used to hardcode 0.42 whenever used_sources was empty."""
+    high = nodes.confidence_node(
+        {
+            "tenant_id": "t1",
+            "message": "hi",
+            "retrieved_context": "No indexed FAQ context found for this tenant.",
+            "used_sources": [],
+            "retrieval_score": 0.0,
+            "intent_confidence": 0.92,
+        }
+    )
+    low = nodes.confidence_node(
+        {
+            "tenant_id": "t1",
+            "message": "maybe refund?",
+            "retrieved_context": "",
+            "used_sources": [],
+            "retrieval_score": 0.0,
+            "intent_confidence": 0.55,
+        }
+    )
+    assert high["confidence"] != 0.42
+    assert high["confidence"] > low["confidence"]
+    assert 0.35 <= low["confidence"] <= 0.88

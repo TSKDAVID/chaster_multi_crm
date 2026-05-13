@@ -32,9 +32,13 @@ def _is_memory_recall_request(user_message: str) -> bool:
     markers = (
         "what did i say",
         "what did i just say",
+        "what did i ask",
         "what was my last message",
+        "what was my question",
         "repeat what i said",
         "do you remember what i said",
+        "do you remember what i asked",
+        "what were we talking about",
     )
     return any(m in msg for m in markers)
 
@@ -43,13 +47,16 @@ def _memory_recall_reply(history: Iterable[dict[str, str]] | None) -> str | None
     if not history:
         return None
     user_turns: list[str] = []
+    assistant_turns: list[str] = []
     for turn in history:
         role = str(turn.get("role") or "")
-        if role != "user":
-            continue
         body = str(turn.get("content") or turn.get("body") or "").strip()
-        if body:
+        if not body:
+            continue
+        if role == "user":
             user_turns.append(body)
+        elif role == "assistant":
+            assistant_turns.append(body)
     if not user_turns:
         return None
     last = user_turns[-1]

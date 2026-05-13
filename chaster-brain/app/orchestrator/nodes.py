@@ -88,7 +88,11 @@ def confidence_node(state: OrchestratorState) -> OrchestratorState:
         confidence = 0.45 + (retrieval_score * 0.35) + (context_factor * 0.10) + (intent_conf * 0.10)
         confidence = round(min(0.95, max(0.4, confidence)), 2)
     else:
-        confidence = 0.42
+        # No grounded chunk IDs (or empty context): the old code always returned
+        # 0.42, which made the UI look "stuck". Intent + any retrieval_score
+        # still carry signal (e.g. trigram misses but rerank score from fallbacks).
+        confidence = 0.38 + (intent_conf * 0.42) + (retrieval_score * 0.18)
+        confidence = round(min(0.88, max(0.35, confidence)), 2)
 
     state["confidence"] = confidence
     # Low-confidence copy for account-specific flows is applied in API handlers

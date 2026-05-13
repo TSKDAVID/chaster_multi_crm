@@ -1,7 +1,7 @@
 import secrets
 import logging
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import jwt
 
@@ -233,7 +233,14 @@ def sandbox_message(
             detail="Chaster Brain is currently stopped for this tenant",
         )
 
+    # --- Resolve or create a conversation_id ---
+    # The sandbox MUST have a conversation_id for memory to work.  When the
+    # Supabase `conversations` insert fails (schema drift, RLS, missing
+    # columns) we fall back to a synthetic UUID so the hot-cache memory layer
+    # still functions; message persistence becomes best-effort.
     conversation_id: str | None = None
+    db_conversation = False  # True when the id maps to a real DB row.
+
     if payload.conversation_id:
         existing = _try_resume_conversation(
             tenant_id=payload.tenant_id,
@@ -241,10 +248,23 @@ def sandbox_message(
         )
         if existing and existing.get("id"):
             conversation_id = str(existing["id"])
+            db_conversation = True
+        else:
+            # The frontend sent a conversation_id but the DB doesn't know it.
+            # It could be a synthetic (cache-only) id from a previous turn
+            # where DB insert failed — keep using it for cache continuity.
+            conversation_id = str(payload.conversation_id)
 
     if conversation_id is None:
-        conversation_id = _create_sandbox_ai_conversation(tenant_id=payload.tenant_id)
+        db_id = _create_sandbox_ai_conversation(tenant_id=payload.tenant_id)
+        if db_id:
+            conversation_id = db_id
+            db_conversation = True
+        else:
+            conversation_id = f"sandbox-{uuid4()}"
+            logger.info("sandbox: using synthetic conversation_id %s (DB insert failed)", conversation_id)
 
+    # --- Load memory (hot cache first, then Supabase) ---
     memory_context = memory_load_context(conversation_id)
     history_payload = _history_to_chat(memory_context.history)
 
@@ -292,33 +312,39 @@ def sandbox_message(
 
     record_ai_request(payload.tenant_id, state["intent"], float(state["confidence"]))
 
-    if conversation_id:
-        insert_row(
-            "messages",
-            {
-                "conversation_id": conversation_id,
-                "sender_id": None,
-                "body": payload.message,
-            },
-        )
-        insert_row(
-            "messages",
-            {
-                "conversation_id": conversation_id,
-                "sender_id": None,
-                "body": state["response"],
-            },
-        )
-        memory_append_turn(
-            conversation_id,
-            user_message=payload.message,
-            assistant_message=state["response"],
-        )
-        background_tasks.add_task(
-            memory_maybe_compress,
-            conversation_id,
-            tenant_id=payload.tenant_id,
-        )
+    # --- Persist messages (best-effort) and update hot cache (always) ---
+    if db_conversation:
+        try:
+            insert_row(
+                "messages",
+                {
+                    "conversation_id": conversation_id,
+                    "sender_id": None,
+                    "body": payload.message,
+                },
+            )
+            insert_row(
+                "messages",
+                {
+                    "conversation_id": conversation_id,
+                    "sender_id": None,
+                    "body": state["response"],
+                },
+            )
+        except Exception as exc:
+            logger.warning("sandbox: messages insert failed (%s); cache-only memory this turn", exc)
+
+    # Hot-cache append runs regardless of whether DB insert succeeded.
+    memory_append_turn(
+        conversation_id,
+        user_message=payload.message,
+        assistant_message=state["response"],
+    )
+    background_tasks.add_task(
+        memory_maybe_compress,
+        conversation_id,
+        tenant_id=payload.tenant_id,
+    )
 
     return SandboxMessageResponse(
         tenant_id=payload.tenant_id,
@@ -336,16 +362,7 @@ def sandbox_reset(
     authorization: str = Header(default="", alias="Authorization"),
 ):
     _require_tenant_control_access(authorization, payload.tenant_id)
-    if payload.conversation_id:
-        existing = _try_resume_conversation(
-            tenant_id=payload.tenant_id,
-            conversation_id=str(payload.conversation_id),
-        )
-        if not existing or not existing.get("id"):
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail="Unknown conversation for this tenant",
-            )
+    # Accept both real DB conversation IDs and synthetic sandbox-* IDs.
     reset_conversation_cache(payload.conversation_id)
     return SandboxResetResponse()
 
