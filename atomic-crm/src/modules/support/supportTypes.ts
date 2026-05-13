@@ -73,6 +73,10 @@ export type SupportCaseRow = {
   merged_into_case_id?: string | null;
   merged_at?: string | null;
   merged_by?: string | null;
+  // Enrichment fields
+  tags?: string[];
+  follow_up_at?: string | null;
+  related_case_id?: string | null;
 };
 
 export type SupportCaseMessageRow = {
