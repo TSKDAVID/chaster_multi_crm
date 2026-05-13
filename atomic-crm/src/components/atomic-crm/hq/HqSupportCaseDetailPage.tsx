@@ -6,7 +6,8 @@ import {
   FunctionsFetchError,
   FunctionsHttpError,
 } from "@supabase/supabase-js";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, CalendarClock, ExternalLink, Link2, Tag, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { ChasterHQGuard } from "../access/ChasterHQGuard";
 import { PermissionGate } from "../access/PermissionGate";
@@ -222,6 +223,24 @@ function normalizeCaseDetail(
   };
 }
 
+function TagInput({ caseId, currentTags, onUpdate }: { caseId: string; currentTags: string[]; onUpdate: () => void }) {
+  const [input, setInput] = useState("");
+  const notify = useNotify();
+  const addTag = async () => {
+    const tag = input.trim().toLowerCase();
+    if (!tag || currentTags.includes(tag)) return;
+    const { error } = await getSupabaseClient().from("support_cases").update({ tags: [...currentTags, tag] }).eq("id", caseId);
+    if (error) notify(error.message, { type: "error" });
+    else { setInput(""); onUpdate(); }
+  };
+  return (
+    <div className="flex gap-1.5">
+      <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Add tag..." className="text-xs h-7" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void addTag(); } }} />
+      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={!input.trim()} onClick={() => void addTag()}>Add</Button>
+    </div>
+  );
+}
+
 export function HqSupportCaseDetailPage() {
   const { caseId } = useParams<{ caseId: string }>();
   const translate = useTranslate();
@@ -267,6 +286,20 @@ export function HqSupportCaseDetailPage() {
   });
 
   const c = caseQ.data;
+
+  const relatedCaseQ = useQuery({
+    queryKey: ["support-related-case", c?.related_case_id],
+    enabled: !!c?.related_case_id,
+    queryFn: async () => {
+      const { data, error } = await getSupabaseClient()
+        .from("support_cases")
+        .select("id, case_number, subject, status")
+        .eq("id", c!.related_case_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; case_number: string; subject: string; status: string } | null;
+    },
+  });
 
   useEffect(() => {
     if (c?.status) setStatus(c.status);
@@ -700,9 +733,15 @@ export function HqSupportCaseDetailPage() {
                 </div>
               ) : null}
 
-              <div className="rounded-xl border border-border/80 bg-card p-5 shadow-sm sm:p-6">
+              <div className="rounded-xl border border-border/80 bg-gradient-to-r from-card via-card to-muted/20 p-5 shadow-sm sm:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-3">
+                    {c.follow_up_at && new Date(c.follow_up_at).getTime() < Date.now() && c.status !== "resolved" ? (
+                      <div className="inline-flex items-center gap-1.5 rounded-full border border-red-500/50 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                        <CalendarClock className="h-3 w-3" />
+                        Follow-up overdue
+                      </div>
+                    ) : null}
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                       {c.source === "email" && c.source_email ? (
                         <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
@@ -744,6 +783,11 @@ export function HqSupportCaseDetailPage() {
                           Escalation Level {c.escalation_level}
                         </Badge>
                       ) : null}
+                      {(c.tags ?? []).map((tag) => (
+                        <Badge key={tag} variant="outline" className="font-normal bg-muted/50 text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
                     </div>
                     {c.status !== "resolved" && (c.first_response_due_at || c.resolution_due_at) ? (
                       <div className="mt-3 flex flex-wrap gap-3">
@@ -823,6 +867,29 @@ export function HqSupportCaseDetailPage() {
                       )}
                     </CardContent>
                   </Card>
+
+                  {c.related_case_id && relatedCaseQ.data ? (
+                    <Card className="border-border/80 shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Link2 className="h-4 w-4" />
+                          Related Case
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Link
+                          to={`/hq/support/cases/${relatedCaseQ.data.id}`}
+                          className="block rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                        >
+                          <p className="font-medium text-sm">{relatedCaseQ.data.subject}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <span className="font-mono">{relatedCaseQ.data.case_number}</span>
+                            <Badge variant="secondary" className="text-[10px]">{relatedCaseQ.data.status}</Badge>
+                          </div>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  ) : null}
 
                   {isProspectCase && c.support_requesters ? (
                     <PermissionGate permission="hq.support.cases.manage">
@@ -1026,6 +1093,58 @@ export function HqSupportCaseDetailPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs flex items-center gap-1.5">
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            Follow-up Date
+                          </Label>
+                          {c.follow_up_at ? (
+                            <div className="flex items-center gap-2">
+                              <p className={cn(
+                                "text-sm font-medium",
+                                new Date(c.follow_up_at).getTime() < Date.now() && c.status !== "resolved" && "text-red-600"
+                              )}>
+                                {new Date(c.follow_up_at).toLocaleString()}
+                              </p>
+                              <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={async () => {
+                                const { error } = await getSupabaseClient().from("support_cases").update({ follow_up_at: null }).eq("id", caseId!);
+                                if (error) notify(error.message, { type: "error" });
+                                else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                              }}>
+                                Clear
+                              </Button>
+                            </div>
+                          ) : (
+                            <Input type="datetime-local" className="text-sm" onChange={async (e) => {
+                              if (!e.target.value) return;
+                              const { error } = await getSupabaseClient().from("support_cases").update({ follow_up_at: new Date(e.target.value).toISOString() }).eq("id", caseId!);
+                              if (error) notify(error.message, { type: "error" });
+                              else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                            }} />
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs flex items-center gap-1.5">
+                            <Tag className="h-3.5 w-3.5" />
+                            Tags
+                          </Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(c.tags ?? []).map((tag) => (
+                              <Badge key={tag} variant="secondary" className="gap-1 pr-1 text-xs">
+                                {tag}
+                                <button type="button" className="ml-0.5 h-3.5 w-3.5 rounded-full hover:bg-destructive/20 inline-flex items-center justify-center" onClick={async () => {
+                                  const updated = (c.tags ?? []).filter((t) => t !== tag);
+                                  const { error } = await getSupabaseClient().from("support_cases").update({ tags: updated }).eq("id", caseId!);
+                                  if (error) notify(error.message, { type: "error" });
+                                  else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                                }}>
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                          <TagInput caseId={caseId!} currentTags={c.tags ?? []} onUpdate={() => void qc.invalidateQueries({ queryKey: ["support-case", caseId] })} />
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Button
