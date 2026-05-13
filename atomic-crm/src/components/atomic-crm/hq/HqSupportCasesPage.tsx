@@ -1,8 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
-import { ChevronUp, Plus, Search, UserPlus, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  CheckCircle,
+  ChevronUp,
+  Clock,
+  Inbox,
+  LayoutGrid,
+  LayoutList,
+  List,
+  MessageSquare,
+  Plus,
+  Search,
+  TrendingUp,
+  UserCheck,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { ChasterHQGuard } from "../access/ChasterHQGuard";
 import { PermissionGate } from "../access/PermissionGate";
@@ -66,6 +84,7 @@ type CaseWithTenant = SupportCaseRow & {
 };
 
 type QuickView = "all" | "my_open" | "unassigned" | "unread";
+type ViewMode = "table" | "card" | "compact";
 
 function statusLabelKey(status: SupportCaseStatus): string {
   switch (status) {
@@ -162,6 +181,9 @@ export function HqSupportCasesPage() {
   const [tenantFilter, setTenantFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem("hq-support-view-mode") as ViewMode) || "table"; } catch { return "table"; }
+  });
   const [newOpen, setNewOpen] = useState(false);
   const [newTenantId, setNewTenantId] = useState<string>("");
   const [newSubject, setNewSubject] = useState("");
@@ -172,6 +194,18 @@ export function HqSupportCasesPage() {
   const [tenantQuery, setTenantQuery] = useState("");
   const [showProspectFields, setShowProspectFields] = useState(false);
   const [tenantPickerOpen, setTenantPickerOpen] = useState(false);
+  const [newSource, setNewSource] = useState<SupportCaseSource>("hq");
+  const [newTags, setNewTags] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [newFollowUp, setNewFollowUp] = useState("");
+  const [newInternalNote, setNewInternalNote] = useState("");
+  const [newAssignTo, setNewAssignTo] = useState<string>("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newAttachmentFiles, setNewAttachmentFiles] = useState<File[]>([]);
+  const [requesterSearchQ, setRequesterSearchQ] = useState("");
+  const [relatedCaseSearchQ, setRelatedCaseSearchQ] = useState("");
+  const [selectedRequesterId, setSelectedRequesterId] = useState<string>("");
+  const [selectedRelatedCaseId, setSelectedRelatedCaseId] = useState<string>("");
   const tenantPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -193,6 +227,8 @@ export function HqSupportCasesPage() {
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [tenantPickerOpen]);
+  useEffect(() => { try { localStorage.setItem("hq-support-view-mode", viewMode); } catch {} }, [viewMode]);
+
   const [prospectOrg, setProspectOrg] = useState("");
   const [prospectFirst, setProspectFirst] = useState("");
   const [prospectLast, setProspectLast] = useState("");
@@ -282,6 +318,55 @@ export function HqSupportCasesPage() {
     },
   });
 
+  const staffListQ = useQuery({
+    queryKey: ["hq-staff-list-for-assign"],
+    enabled: newOpen,
+    queryFn: async () => {
+      const { data: team, error: tErr } = await getSupabaseClient().from("chaster_team").select("user_id");
+      if (tErr) throw tErr;
+      const ids = (team ?? []).map((r) => (r as { user_id: string }).user_id);
+      if (ids.length === 0) return [] as { user_id: string; label: string }[];
+      const { data: sales, error: sErr } = await getSupabaseClient().from("sales").select("user_id, first_name, last_name, email").in("user_id", ids);
+      if (sErr) throw sErr;
+      return (sales ?? []).map((row) => {
+        const o = row as { user_id: string; first_name: string | null; last_name: string | null; email: string | null };
+        const fn = [o.first_name, o.last_name].filter(Boolean).join(" ").trim();
+        return { user_id: o.user_id, label: fn || o.email || o.user_id.slice(0, 8) };
+      });
+    },
+  });
+
+  const requesterResultsQ = useQuery({
+    queryKey: ["hq-requester-search", requesterSearchQ],
+    enabled: requesterSearchQ.trim().length >= 2,
+    queryFn: async () => {
+      const q = requesterSearchQ.trim().toLowerCase();
+      const { data, error } = await getSupabaseClient()
+        .from("support_requesters")
+        .select("id, organization_name, contact_first_name, contact_last_name, email, phone")
+        .or(`email.ilike.%${q}%,organization_name.ilike.%${q}%,contact_first_name.ilike.%${q}%,contact_last_name.ilike.%${q}%`)
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []) as { id: string; organization_name: string | null; contact_first_name: string | null; contact_last_name: string | null; email: string | null; phone: string | null }[];
+    },
+  });
+
+  const relatedCaseResultsQ = useQuery({
+    queryKey: ["hq-related-case-search", relatedCaseSearchQ],
+    enabled: relatedCaseSearchQ.trim().length >= 2,
+    queryFn: async () => {
+      const q = relatedCaseSearchQ.trim().toLowerCase();
+      const { data, error } = await getSupabaseClient()
+        .from("support_cases")
+        .select("id, case_number, subject, status")
+        .or(`case_number.ilike.%${q}%,subject.ilike.%${q}%`)
+        .order("updated_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []) as { id: string; case_number: string; subject: string; status: string }[];
+    },
+  });
+
   const rows = casesQ.data ?? [];
 
   const assigneeIds = useMemo(() => {
@@ -356,6 +441,22 @@ export function HqSupportCasesPage() {
       escalated: rows.filter(
         (c) => c.status !== "resolved" && (c.escalation_level ?? 0) > 0,
       ).length,
+      avgFirstResponse: (() => {
+        const withResponse = rows.filter(
+          (c) => (c as Record<string, unknown>).first_responded_at && c.created_at,
+        );
+        if (withResponse.length === 0) return "—";
+        const totalMs = withResponse.reduce((sum, c) => {
+          const created = new Date(c.created_at).getTime();
+          const responded = new Date((c as Record<string, unknown>).first_responded_at as string).getTime();
+          return sum + (responded - created);
+        }, 0);
+        const avgMin = Math.round(totalMs / withResponse.length / 60000);
+        if (avgMin < 60) return `${avgMin}m`;
+        const h = Math.floor(avgMin / 60);
+        const m = avgMin % 60;
+        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+      })(),
     };
   }, [rows, unreadIds]);
 
@@ -450,10 +551,18 @@ export function HqSupportCasesPage() {
           p_tenant_id: newTenantId,
           p_subject: newSubject.trim(),
           p_category: newCategory,
-          p_description: newMessage.trim(),
+          p_description: newDescription.trim(),
           p_priority: newPriority,
           p_assign_to_self: newAssignSelf,
           p_attachments: [],
+          p_initial_message: newMessage.trim(),
+          p_source: newSource,
+          p_tags: newTags,
+          p_follow_up_at: newFollowUp ? new Date(newFollowUp).toISOString() : null,
+          p_internal_note: newInternalNote.trim() || null,
+          p_related_case_id: selectedRelatedCaseId || null,
+          p_assign_to: newAssignTo || null,
+          p_support_requester_id: selectedRequesterId || null,
         },
       );
       if (error) throw error;
@@ -478,6 +587,18 @@ export function HqSupportCasesPage() {
       setProspectEmail("");
       setProspectPhone("");
       setProspectNotes("");
+      setNewSource("hq");
+      setNewTags([]);
+      setNewTagInput("");
+      setNewFollowUp("");
+      setNewInternalNote("");
+      setNewAssignTo("");
+      setNewDescription("");
+      setNewAttachmentFiles([]);
+      setRequesterSearchQ("");
+      setRelatedCaseSearchQ("");
+      setSelectedRequesterId("");
+      setSelectedRelatedCaseId("");
       void qc.invalidateQueries({ queryKey: ["hq-support-cases"] });
       void qc.invalidateQueries({ queryKey: ["support-staff-unread-total"] });
       navigate(`/hq/support/cases/${caseId}`);
@@ -497,11 +618,18 @@ export function HqSupportCasesPage() {
           p_phone: prospectPhone.trim() || null,
           p_subject: newSubject.trim(),
           p_category: newCategory,
-          p_description: newMessage.trim(),
+          p_description: newDescription.trim(),
           p_priority: newPriority,
           p_assign_to_self: newAssignSelf,
           p_attachments: [],
           p_notes: prospectNotes.trim() || null,
+          p_initial_message: newMessage.trim(),
+          p_source: newSource,
+          p_tags: newTags,
+          p_follow_up_at: newFollowUp ? new Date(newFollowUp).toISOString() : null,
+          p_internal_note: newInternalNote.trim() || null,
+          p_related_case_id: selectedRelatedCaseId || null,
+          p_assign_to: newAssignTo || null,
         },
       );
       if (error) throw error;
@@ -526,6 +654,18 @@ export function HqSupportCasesPage() {
       setProspectEmail("");
       setProspectPhone("");
       setProspectNotes("");
+      setNewSource("hq");
+      setNewTags([]);
+      setNewTagInput("");
+      setNewFollowUp("");
+      setNewInternalNote("");
+      setNewAssignTo("");
+      setNewDescription("");
+      setNewAttachmentFiles([]);
+      setRequesterSearchQ("");
+      setRelatedCaseSearchQ("");
+      setSelectedRequesterId("");
+      setSelectedRelatedCaseId("");
       void qc.invalidateQueries({ queryKey: ["hq-support-cases"] });
       void qc.invalidateQueries({ queryKey: ["support-staff-unread-total"] });
       navigate(`/hq/support/cases/${caseId}`);
@@ -610,19 +750,25 @@ export function HqSupportCasesPage() {
 
   const kpiCard = (
     label: string,
-    value: number,
+    value: number | string,
     onClick: () => void,
-    active?: boolean,
+    active: boolean | undefined,
+    icon: React.ReactNode,
+    borderColor: string,
   ) => (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-lg border px-3 py-2 text-left transition-colors hover:bg-muted/60",
+        "rounded-lg border border-l-4 px-3 py-2 text-left transition-colors hover:bg-muted/60",
+        borderColor,
         active && "border-primary bg-primary/5",
       )}
     >
-      <div className="text-2xl font-semibold tabular-nums">{value}</div>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-muted-foreground">{icon}</span>
+        <div className="text-2xl font-semibold tabular-nums transition-all duration-300">{value}</div>
+      </div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </button>
   );
@@ -666,7 +812,7 @@ export function HqSupportCasesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
             {kpiCard(
               translate("chaster.hq.support.kpi_open"),
               kpis.open,
@@ -677,6 +823,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               statusFilter === "open" && quickView === "all",
+              <Inbox className="h-4 w-4" />,
+              "border-l-blue-500",
             )}
             {kpiCard(
               translate("chaster.hq.support.kpi_in_progress"),
@@ -688,6 +836,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               statusFilter === "in_progress" && quickView === "all",
+              <Clock className="h-4 w-4" />,
+              "border-l-yellow-500",
             )}
             {kpiCard(
               translate("chaster.hq.support.kpi_pending_client"),
@@ -699,6 +849,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               statusFilter === "pending_client" && quickView === "all",
+              <UserCheck className="h-4 w-4" />,
+              "border-l-orange-500",
             )}
             {kpiCard(
               translate("chaster.hq.support.kpi_resolved"),
@@ -710,6 +862,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               statusFilter === "resolved" && quickView === "all",
+              <CheckCircle className="h-4 w-4" />,
+              "border-l-green-500",
             )}
             {kpiCard(
               translate("chaster.hq.support.kpi_unassigned"),
@@ -721,6 +875,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               quickView === "unassigned",
+              <Users className="h-4 w-4" />,
+              "border-l-slate-500",
             )}
             {kpiCard(
               translate("chaster.hq.support.kpi_unread_client"),
@@ -732,6 +888,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               quickView === "unread",
+              <MessageSquare className="h-4 w-4" />,
+              "border-l-indigo-500",
             )}
             {kpiCard(
               translate("chaster.hq.support.kpi_new_7d"),
@@ -743,6 +901,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               false,
+              <TrendingUp className="h-4 w-4" />,
+              "border-l-cyan-500",
             )}
             {kpiCard(
               "SLA Breached",
@@ -754,6 +914,8 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               false,
+              <AlertTriangle className="h-4 w-4" />,
+              "border-l-red-500",
             )}
             {kpiCard(
               "Escalated",
@@ -765,32 +927,50 @@ export function HqSupportCasesPage() {
                 setPage(0);
               },
               false,
+              <ArrowUpRight className="h-4 w-4" />,
+              "border-l-purple-500",
+            )}
+            {kpiCard(
+              "Avg First Response",
+              kpis.avgFirstResponse,
+              () => {},
+              false,
+              <Clock className="h-4 w-4" />,
+              "border-l-teal-500",
             )}
           </div>
 
-          <ToggleGroup
-            type="single"
-            value={quickView}
-            onValueChange={(v) => {
-              if (!v) return;
-              setQuickView(v as QuickView);
-              setPage(0);
-            }}
-            className="justify-start flex-wrap"
-          >
-            <ToggleGroupItem value="all" size="sm">
-              {translate("chaster.hq.support.quick_all")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="my_open" size="sm">
-              {translate("chaster.hq.support.quick_my_open")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="unassigned" size="sm">
-              {translate("chaster.hq.support.quick_unassigned")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="unread" size="sm">
-              {translate("chaster.hq.support.quick_unread")}
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex flex-wrap items-center gap-4">
+            <ToggleGroup
+              type="single"
+              value={quickView}
+              onValueChange={(v) => {
+                if (!v) return;
+                setQuickView(v as QuickView);
+                setPage(0);
+              }}
+              className="justify-start flex-wrap"
+            >
+              <ToggleGroupItem value="all" size="sm">
+                {translate("chaster.hq.support.quick_all")}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="my_open" size="sm">
+                {translate("chaster.hq.support.quick_my_open")}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="unassigned" size="sm">
+                {translate("chaster.hq.support.quick_unassigned")}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="unread" size="sm">
+                {translate("chaster.hq.support.quick_unread")}
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => { if (v) setViewMode(v as ViewMode); }} className="ml-auto">
+              <ToggleGroupItem value="table" size="sm" title="Table view"><LayoutList className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="card" size="sm" title="Card view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+              <ToggleGroupItem value="compact" size="sm" title="Compact view"><List className="h-4 w-4" /></ToggleGroupItem>
+            </ToggleGroup>
+          </div>
 
           <Card>
             <CardHeader>
@@ -959,6 +1139,7 @@ export function HqSupportCasesPage() {
                 </div>
               ) : (
                 <>
+                  {viewMode === "table" ? (
                   <div className="rounded-md border overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -1112,6 +1293,66 @@ export function HqSupportCasesPage() {
                       </TableBody>
                     </Table>
                   </div>
+                  ) : viewMode === "card" ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {paged.map((c) => {
+                      const lm = lastMessagesQ.data?.[c.id];
+                      const priorityColor = c.priority === "urgent" ? "bg-red-500" : c.priority === "high" ? "bg-orange-500" : c.priority === "medium" ? "bg-blue-500" : "bg-gray-400";
+                      return (
+                        <Link key={c.id} to={`/hq/support/cases/${c.id}`} className={cn("block rounded-lg border transition-all hover:shadow-md hover:border-primary/30", unreadIds.has(c.id) && "border-l-4 border-l-primary")}>
+                          <div className={cn("h-1 rounded-t-lg", priorityColor)} />
+                          <div className="p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{c.subject}</p>
+                                <p className="text-xs text-muted-foreground font-mono">{c.case_number}</p>
+                              </div>
+                              {unreadIds.has(c.id) ? <span className="h-2.5 w-2.5 rounded-full bg-primary shrink-0 mt-1" /> : null}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">{c.tenants?.company_name ?? c.support_requesters?.organization_name ?? "—"}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              <Badge variant="secondary" className="text-[10px]">{translate(statusLabelKey(c.status))}</Badge>
+                              <Badge variant="outline" className="text-[10px]">{translate(priorityLabelKey(c.priority))}</Badge>
+                              {(c.escalation_level ?? 0) > 0 ? <Badge variant="destructive" className="text-[10px]">L{c.escalation_level}</Badge> : null}
+                            </div>
+                            {lm?.body ? <p className="text-xs text-muted-foreground line-clamp-2">{lm.body.replace(/\s+/g, " ").trim()}</p> : null}
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                              <span>{c.assigned_to ? (assigneeNamesQ.data?.[c.assigned_to] ?? c.assigned_to.slice(0, 8)) : translate("chaster.hq.support.unassigned")}</span>
+                              <span>{new Date(c.updated_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  ) : (
+                  <div className="space-y-1">
+                    {paged.map((c) => {
+                      const lm = lastMessagesQ.data?.[c.id];
+                      return (
+                        <Link key={c.id} to={`/hq/support/cases/${c.id}`} className={cn("flex items-center gap-3 rounded-md border px-3 py-2 transition-colors hover:bg-muted/50", unreadIds.has(c.id) && "border-l-4 border-l-primary bg-primary/5")}>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">{c.subject}</span>
+                              <Badge variant="secondary" className="text-[10px] shrink-0">{translate(statusLabelKey(c.status))}</Badge>
+                              <Badge variant="outline" className="text-[10px] shrink-0">{translate(priorityLabelKey(c.priority))}</Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <span className="font-mono">{c.case_number}</span>
+                              <span>·</span>
+                              <span className="truncate">{c.tenants?.company_name ?? "—"}</span>
+                              <span>·</span>
+                              <span>{translate(categoryLabelKey(c.category))}</span>
+                              <span>·</span>
+                              <span>{c.assigned_to ? (assigneeNamesQ.data?.[c.assigned_to] ?? c.assigned_to.slice(0, 8)) : translate("chaster.hq.support.unassigned")}</span>
+                            </div>
+                          </div>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">{new Date(c.updated_at).toLocaleDateString()}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  )}
                   {pageCount > 1 ? (
                     <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                       <span className="text-muted-foreground">
@@ -1430,96 +1671,190 @@ export function HqSupportCasesPage() {
                     </div>
                   ) : null}
                 </div>
-                <div className="space-y-1">
-                  <Label>{translate("chaster.hq.support.new_case_subject")}</Label>
-                  <Input
-                    value={newSubject}
-                    onChange={(e) => setNewSubject(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>
-                    {translate("chaster.hq.support.new_case_category")}
-                  </Label>
-                  <Select
-                    value={newCategory}
-                    onValueChange={(v) =>
-                      setNewCategory(v as SupportCaseCategory)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(
-                        [
-                          "billing",
-                          "technical",
-                          "account",
-                          "ai_kb",
-                          "widget",
-                          "other",
-                        ] as SupportCaseCategory[]
-                      ).map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {translate(categoryLabelKey(k))}
-                        </SelectItem>
+
+                {/* Section 2: Case Details */}
+                <div className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Case Details</h3>
+                  <div className="space-y-1">
+                    <Label>{translate("chaster.hq.support.new_case_subject")}</Label>
+                    <Input
+                      value={newSubject}
+                      onChange={(e) => setNewSubject(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Description</Label>
+                    <p className="text-xs text-muted-foreground">Brief summary of the case (separate from the initial message)</p>
+                    <Input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Short summary..." />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>
+                      {translate("chaster.hq.support.new_case_category")}
+                    </Label>
+                    <Select
+                      value={newCategory}
+                      onValueChange={(v) =>
+                        setNewCategory(v as SupportCaseCategory)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(
+                          [
+                            "billing",
+                            "technical",
+                            "account",
+                            "ai_kb",
+                            "widget",
+                            "other",
+                          ] as SupportCaseCategory[]
+                        ).map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {translate(categoryLabelKey(k))}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>
+                      {translate("chaster.hq.support.new_case_priority")}
+                    </Label>
+                    <Select
+                      value={newPriority}
+                      onValueChange={(v) =>
+                        setNewPriority(v as SupportCasePriority)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(
+                          [
+                            "low",
+                            "medium",
+                            "high",
+                            "urgent",
+                          ] as SupportCasePriority[]
+                        ).map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {translate(priorityLabelKey(k))}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Case Origin / Source</Label>
+                    <Select value={newSource} onValueChange={(v) => setNewSource(v as SupportCaseSource)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(["portal", "phone", "email", "chat", "social_media", "hq", "other"] as string[]).map((k) => (
+                          <SelectItem key={k} value={k}>{k.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Tags</Label>
+                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                      {newTags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+                          {tag}
+                          <button type="button" className="ml-0.5 h-3.5 w-3.5 rounded-full hover:bg-muted inline-flex items-center justify-center" onClick={() => setNewTags((t) => t.filter((x) => x !== tag))}>
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} placeholder="Add tag..." className="flex-1" onKeyDown={(e) => { if (e.key === "Enter" && newTagInput.trim()) { e.preventDefault(); const t = newTagInput.trim().toLowerCase(); if (!newTags.includes(t)) setNewTags((p) => [...p, t]); setNewTagInput(""); } }} />
+                      <Button type="button" variant="outline" size="sm" disabled={!newTagInput.trim()} onClick={() => { const t = newTagInput.trim().toLowerCase(); if (t && !newTags.includes(t)) setNewTags((p) => [...p, t]); setNewTagInput(""); }}>Add</Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Related Case</Label>
+                    <Input value={relatedCaseSearchQ} onChange={(e) => { setRelatedCaseSearchQ(e.target.value); if (!e.target.value) setSelectedRelatedCaseId(""); }} placeholder="Search by case number or subject..." />
+                    {relatedCaseResultsQ.data && relatedCaseResultsQ.data.length > 0 && relatedCaseSearchQ.trim().length >= 2 && !selectedRelatedCaseId ? (
+                      <div className="rounded-md border bg-popover p-1 max-h-40 overflow-y-auto">
+                        {relatedCaseResultsQ.data.map((rc) => (
+                          <button key={rc.id} type="button" className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted" onClick={() => { setSelectedRelatedCaseId(rc.id); setRelatedCaseSearchQ(`${rc.case_number} - ${rc.subject}`); }}>
+                            <span className="font-mono text-xs">{rc.case_number}</span>
+                            <span className="truncate">{rc.subject}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    {selectedRelatedCaseId ? <p className="text-xs text-green-600">Related case linked</p> : null}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label>
-                    {translate("chaster.hq.support.new_case_priority")}
-                  </Label>
-                  <Select
-                    value={newPriority}
-                    onValueChange={(v) =>
-                      setNewPriority(v as SupportCasePriority)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(
-                        [
-                          "low",
-                          "medium",
-                          "high",
-                          "urgent",
-                        ] as SupportCasePriority[]
-                      ).map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {translate(priorityLabelKey(k))}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                {/* Section 3: Contact / Requester */}
+                {!showProspectFields ? (
+                  <div className="space-y-1 border-t pt-4">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">Contact / Requester</h3>
+                    <Input value={requesterSearchQ} onChange={(e) => { setRequesterSearchQ(e.target.value); if (!e.target.value) setSelectedRequesterId(""); }} placeholder="Search contacts by name or email..." />
+                    {requesterResultsQ.data && requesterResultsQ.data.length > 0 && requesterSearchQ.trim().length >= 2 && !selectedRequesterId ? (
+                      <div className="rounded-md border bg-popover p-1 max-h-40 overflow-y-auto">
+                        {requesterResultsQ.data.map((r) => (
+                          <button key={r.id} type="button" className="flex w-full flex-col gap-0.5 rounded px-2 py-1.5 text-sm hover:bg-muted text-left" onClick={() => { setSelectedRequesterId(r.id); setRequesterSearchQ([r.contact_first_name, r.contact_last_name].filter(Boolean).join(" ") || r.email || r.organization_name || ""); }}>
+                            <span className="font-medium">{[r.contact_first_name, r.contact_last_name].filter(Boolean).join(" ") || r.organization_name || "Unknown"}</span>
+                            {r.email ? <span className="text-xs text-muted-foreground">{r.email}</span> : null}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    {selectedRequesterId ? <p className="text-xs text-green-600">Contact linked</p> : null}
+                  </div>
+                ) : null}
+
+                {/* Section 4: Message & Notes */}
+                <div className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Message &amp; Notes</h3>
+                  <div className="space-y-1">
+                    <Label>Initial Message *</Label>
+                    <Textarea rows={4} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="resize-y" placeholder="Describe the issue..." />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Attachments</Label>
+                    <Input type="file" multiple onChange={(e) => setNewAttachmentFiles(Array.from(e.target.files ?? []))} />
+                    {newAttachmentFiles.length > 0 ? <p className="text-xs text-muted-foreground">{newAttachmentFiles.length} file(s) selected</p> : null}
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Internal Note (staff only)</Label>
+                    <Textarea rows={2} value={newInternalNote} onChange={(e) => setNewInternalNote(e.target.value)} className="resize-y" placeholder="Private note visible only to staff..." />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="hq-case-description">
-                    {translate("chaster.hq.support.new_case_description")}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {translate("chaster.hq.support.new_case_description_hint")}
-                  </p>
-                  <Textarea
-                    id="hq-case-description"
-                    rows={4}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="resize-y"
-                  />
+
+                {/* Section 5: Assignment & Scheduling */}
+                <div className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Assignment &amp; Scheduling</h3>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={newAssignSelf} onChange={(e) => { setNewAssignSelf(e.target.checked); if (e.target.checked) setNewAssignTo(""); }} />
+                    {translate("chaster.hq.support.new_case_assign_self")}
+                  </label>
+                  {!newAssignSelf ? (
+                    <div className="space-y-1">
+                      <Label>Assign to Agent</Label>
+                      <Select value={newAssignTo} onValueChange={setNewAssignTo}>
+                        <SelectTrigger><SelectValue placeholder="Select agent..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {(staffListQ.data ?? []).map((s) => (
+                            <SelectItem key={s.user_id} value={s.user_id}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                  <div className="space-y-1">
+                    <Label>Follow-up / Due Date</Label>
+                    <Input type="datetime-local" value={newFollowUp} onChange={(e) => setNewFollowUp(e.target.value)} />
+                  </div>
                 </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={newAssignSelf}
-                    onChange={(e) => setNewAssignSelf(e.target.checked)}
-                  />
-                  {translate("chaster.hq.support.new_case_assign_self")}
-                </label>
               </div>
               <DialogFooter className="shrink-0 gap-2 border-t border-border/60 bg-muted/15 px-6 py-4">
                 <Button
