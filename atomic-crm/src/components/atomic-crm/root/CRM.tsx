@@ -80,6 +80,8 @@ import { HqSupportFaqsPage } from "../hq/HqSupportFaqsPage";
 import { HqPlatformTeamPage } from "../hq/HqPlatformTeamPage";
 import { HqOrganizationsPage } from "../hq/HqOrganizationsPage";
 import { HqBrainSandboxPage } from "../hq/HqBrainSandboxPage";
+import { HqRiskAlertsPage } from "../hq/HqRiskAlertsPage";
+import { HqSlaPoliciesPage } from "../hq/HqSlaPoliciesPage";
 import { LandingTestPage } from "../public-test/LandingTestPage";
 import { CheckoutTestPage } from "../public-test/CheckoutTestPage";
 import { CheckoutSuccessPage } from "../public-test/CheckoutSuccessPage";
@@ -363,6 +365,8 @@ const DesktopAdmin = (
           element={<HqOrganizationsPage />}
         />
         <Route path="/hq/brain-sandbox" element={<HqBrainSandboxPage />} />
+        <Route path="/hq/risk-alerts" element={<HqRiskAlertsPage />} />
+        <Route path="/hq/support/sla-policies" element={<HqSlaPoliciesPage />} />
         <Route path="/portal" element={<PortalHomePage />} />
         <Route
           path="/portal/knowledge-base"
@@ -501,6 +505,8 @@ const MobileAdmin = (
             element={<HqOrganizationsPage />}
           />
           <Route path="/hq/brain-sandbox" element={<HqBrainSandboxPage />} />
+          <Route path="/hq/risk-alerts" element={<HqRiskAlertsPage />} />
+          <Route path="/hq/support/sla-policies" element={<HqSlaPoliciesPage />} />
           <Route path="/portal" element={<PortalHomePage />} />
           <Route
             path="/portal/knowledge-base"

@@ -59,6 +59,58 @@ import type {
   SupportRequesterRow,
 } from "@/modules/support/supportTypes";
 
+function SlaTimerChip({
+  label,
+  dueAt,
+  breached,
+  completedAt,
+}: {
+  label: string;
+  dueAt: string;
+  breached: boolean;
+  completedAt: string | null;
+}) {
+  const due = new Date(dueAt).getTime();
+  const now = Date.now();
+
+  if (completedAt) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/50 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-950/30 dark:text-green-300">
+        {label}: Met
+      </span>
+    );
+  }
+
+  if (breached) {
+    const overdue = now - due;
+    const hrs = Math.floor(overdue / 3600000);
+    const mins = Math.floor((overdue % 3600000) / 60000);
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/50 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300 animate-pulse">
+        {label}: Breached ({hrs > 0 ? `${hrs}h ` : ""}{mins}m overdue)
+      </span>
+    );
+  }
+
+  const remaining = due - now;
+  const hrs = Math.floor(remaining / 3600000);
+  const mins = Math.floor((remaining % 3600000) / 60000);
+  const isUrgent = remaining < 900000; // <15 min
+  const isWarning = remaining < 3600000; // <1 hr
+
+  const colorClass = isUrgent
+    ? "border-red-500/50 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+    : isWarning
+      ? "border-yellow-500/50 bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-300"
+      : "border-green-500/50 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300";
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${colorClass}`}>
+      {label}: {hrs > 0 ? `${hrs}h ` : ""}{mins}m remaining
+    </span>
+  );
+}
+
 async function formatEdgeFunctionError(error: unknown): Promise<string> {
   if (error instanceof FunctionsHttpError) {
     const res = error.context as Response;
@@ -567,10 +619,96 @@ export function HqSupportCaseDetailPage() {
                 </BreadcrumbList>
               </Breadcrumb>
 
+              {c.possible_duplicate_of && !c.merged_into_case_id ? (
+                <div className="rounded-lg border border-yellow-400/50 bg-yellow-50 dark:bg-yellow-950/20 p-4 flex items-center justify-between gap-4">
+                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                    This case may be a duplicate of another case
+                    {c.duplicate_confidence
+                      ? ` (${Math.round(c.duplicate_confidence * 100)}% confidence)`
+                      : ""}
+                    .
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const { error } = await getSupabaseClient().rpc(
+                            "merge_support_cases",
+                            {
+                              p_source_case_id: caseId!,
+                              p_target_case_id: c.possible_duplicate_of!,
+                            },
+                          );
+                          if (error) throw error;
+                          notify("Case merged successfully", { type: "success" });
+                          void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                        } catch (e: unknown) {
+                          notify((e as Error).message, { type: "error" });
+                        }
+                      }}
+                    >
+                      Merge into original
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const { error } = await getSupabaseClient()
+                          .from("support_cases")
+                          .update({ possible_duplicate_of: null, duplicate_confidence: null })
+                          .eq("id", caseId!);
+                        if (error) notify(error.message, { type: "error" });
+                        else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                      }}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {c.merged_into_case_id ? (
+                <div className="rounded-lg border border-gray-300/50 bg-gray-50 dark:bg-gray-950/20 p-4 flex items-center justify-between gap-4">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    This case was merged into another case
+                    {c.merged_at
+                      ? ` on ${new Date(c.merged_at).toLocaleDateString()}`
+                      : ""}
+                    .
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const { error } = await getSupabaseClient().rpc(
+                          "unmerge_support_case",
+                          { p_source_case_id: caseId! },
+                        );
+                        if (error) throw error;
+                        notify("Case unmerged successfully", { type: "success" });
+                        void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                      } catch (e: unknown) {
+                        notify((e as Error).message, { type: "error" });
+                      }
+                    }}
+                  >
+                    Undo merge
+                  </Button>
+                </div>
+              ) : null}
+
               <div className="rounded-xl border border-border/80 bg-card p-5 shadow-sm sm:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-3">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                      {c.source === "email" && c.source_email ? (
+                        <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                          {c.source_email}
+                        </span>
+                      ) : null}
                       <span className="font-mono text-xs tracking-wide">
                         {c.case_number}
                       </span>
@@ -601,7 +739,32 @@ export function HqSupportCaseDetailPage() {
                       <Badge variant="outline" className="font-normal">
                         {translate(sourceLabelKey(c.source))}
                       </Badge>
+                      {(c.escalation_level ?? 0) > 0 ? (
+                        <Badge variant="destructive" className="font-normal">
+                          Escalation Level {c.escalation_level}
+                        </Badge>
+                      ) : null}
                     </div>
+                    {c.status !== "resolved" && (c.first_response_due_at || c.resolution_due_at) ? (
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        {c.first_response_due_at ? (
+                          <SlaTimerChip
+                            label="Response SLA"
+                            dueAt={c.first_response_due_at}
+                            breached={!!c.sla_response_breached}
+                            completedAt={c.first_responded_at ?? null}
+                          />
+                        ) : null}
+                        {c.resolution_due_at ? (
+                          <SlaTimerChip
+                            label="Resolution SLA"
+                            dueAt={c.resolution_due_at}
+                            breached={!!c.sla_resolution_breached}
+                            completedAt={c.status === "resolved" ? c.resolved_at : null}
+                          />
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   {c.tenant_id ? (
                     <Button variant="outline" size="sm" asChild className="shrink-0">

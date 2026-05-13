@@ -348,6 +348,14 @@ export function HqSupportCasesPage() {
       new7d: rows.filter(
         (c) => new Date(c.created_at).getTime() >= cutoff,
       ).length,
+      slaBreached: rows.filter(
+        (c) =>
+          c.status !== "resolved" &&
+          (c.sla_response_breached || c.sla_resolution_breached),
+      ).length,
+      escalated: rows.filter(
+        (c) => c.status !== "resolved" && (c.escalation_level ?? 0) > 0,
+      ).length,
     };
   }, [rows, unreadIds]);
 
@@ -658,7 +666,7 @@ export function HqSupportCasesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2">
             {kpiCard(
               translate("chaster.hq.support.kpi_open"),
               kpis.open,
@@ -728,6 +736,28 @@ export function HqSupportCasesPage() {
             {kpiCard(
               translate("chaster.hq.support.kpi_new_7d"),
               kpis.new7d,
+              () => {
+                setQuickView("all");
+                setStatusFilter("all");
+                setUnreadOnly(false);
+                setPage(0);
+              },
+              false,
+            )}
+            {kpiCard(
+              "SLA Breached",
+              kpis.slaBreached,
+              () => {
+                setQuickView("all");
+                setStatusFilter("all");
+                setUnreadOnly(false);
+                setPage(0);
+              },
+              false,
+            )}
+            {kpiCard(
+              "Escalated",
+              kpis.escalated,
               () => {
                 setQuickView("all");
                 setStatusFilter("all");
@@ -963,6 +993,7 @@ export function HqSupportCasesPage() {
                           <TableHead>
                             {translate("chaster.hq.support.col_created")}
                           </TableHead>
+                          <TableHead>SLA</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -997,9 +1028,26 @@ export function HqSupportCasesPage() {
                                   "—"}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="secondary">
-                                  {translate(statusLabelKey(c.status))}
-                                </Badge>
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant="secondary">
+                                    {translate(statusLabelKey(c.status))}
+                                  </Badge>
+                                  {c.source === "email" ? (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                                      email
+                                    </Badge>
+                                  ) : null}
+                                  {c.possible_duplicate_of && !c.merged_into_case_id ? (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-orange-400 text-orange-600">
+                                      Possible Duplicate
+                                    </Badge>
+                                  ) : null}
+                                  {c.merged_into_case_id ? (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                                      Merged
+                                    </Badge>
+                                  ) : null}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline">
@@ -1025,6 +1073,38 @@ export function HqSupportCasesPage() {
                               </TableCell>
                               <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                                 {new Date(c.created_at).toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col gap-1">
+                                  {c.sla_response_breached ? (
+                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                      Response Breached
+                                    </Badge>
+                                  ) : c.sla_resolution_breached ? (
+                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                      Resolution Breached
+                                    </Badge>
+                                  ) : c.first_response_due_at && c.status !== "resolved" ? (
+                                    (() => {
+                                      const due = new Date(c.first_response_due_at).getTime();
+                                      const elapsed = (due - Date.now()) / (due - new Date(c.created_at).getTime());
+                                      return elapsed < 0.25 ? (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-yellow-500 text-yellow-600">
+                                          SLA At Risk
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500 text-green-600">
+                                          On Track
+                                        </Badge>
+                                      );
+                                    })()
+                                  ) : null}
+                                  {(c.escalation_level ?? 0) > 0 ? (
+                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                      Escalation L{c.escalation_level}
+                                    </Badge>
+                                  ) : null}
+                                </div>
                               </TableCell>
                             </TableRow>
                           );

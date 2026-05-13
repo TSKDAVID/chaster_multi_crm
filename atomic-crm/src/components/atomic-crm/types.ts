@@ -164,6 +164,16 @@ export type Task = {
   done_date?: string | null;
   sales_id?: Identifier;
   tenant_id?: string;
+  case_id?: string | null;
+  deal_id?: string | null;
+  assigned_to?: string | null;
+  delegated_by?: string | null;
+  delegated_at?: string | null;
+  priority?: "low" | "medium" | "high" | "urgent";
+  status?: "pending" | "in_progress" | "completed" | "cancelled";
+  completed_at?: string | null;
+  recurring_rule?: string | null;
+  parent_task_id?: string | null;
 } & Pick<RaRecord, "id">;
 
 export type ActivityCompanyCreated = {

@@ -397,6 +397,19 @@ export function PortalSupportPageContent({
                         <Badge variant="secondary">
                           {translate(statusLabelKey(c.status))}
                         </Badge>
+                        {c.priority === "high" || c.priority === "urgent" ? (
+                          <Badge
+                            variant={c.priority === "urgent" ? "destructive" : "outline"}
+                            className={c.priority === "high" ? "border-orange-400 text-orange-600" : ""}
+                          >
+                            Priority: {c.priority === "urgent" ? "Urgent" : "High"}
+                          </Badge>
+                        ) : null}
+                        {(c.escalation_level ?? 0) > 0 ? (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Escalated
+                          </Badge>
+                        ) : null}
                         <span>
                           {translate(categoryLabelKey(c.category))} ·{" "}
                           {new Date(c.updated_at).toLocaleString()}

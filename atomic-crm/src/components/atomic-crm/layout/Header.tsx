@@ -202,6 +202,13 @@ const Header = () => {
                       badge={supportStaffUnread.data ?? 0}
                     />
                   ) : null}
+                  {isOwnerSide && can("hq.view") ? (
+                    <NavigationTab
+                      label="Risk Alerts"
+                      to="/hq/risk-alerts"
+                      isActive={Boolean(matchPath("/hq/risk-alerts", path))}
+                    />
+                  ) : null}
                 </nav>
               </div>
               <div className="flex items-center gap-1">

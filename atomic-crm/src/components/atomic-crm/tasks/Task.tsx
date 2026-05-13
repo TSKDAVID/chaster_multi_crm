@@ -90,7 +90,11 @@ export const Task = ({
 
   return (
     <>
-      <div className="flex items-start justify-between">
+      <div className={`flex items-start justify-between ${
+        !task.done_date && task.due_date && new Date(task.due_date) < new Date()
+          ? "border-l-2 border-red-500 pl-2"
+          : ""
+      }`}>
         <div
           className="flex items-start gap-2 flex-1"
           onClick={isMobile ? handleCheck() : undefined}
@@ -120,6 +124,31 @@ export const Task = ({
                 </>
               )}
               {task.text}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
+              {task.priority && task.priority !== "medium" ? (
+                <span
+                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium leading-none ${
+                    task.priority === "urgent"
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                      : task.priority === "high"
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  }`}
+                >
+                  {task.priority}
+                </span>
+              ) : null}
+              {task.status && task.status !== "pending" ? (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium leading-none bg-muted text-muted-foreground">
+                  {task.status.replace("_", " ")}
+                </span>
+              ) : null}
+              {task.recurring_rule ? (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium leading-none bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                  recurring
+                </span>
+              ) : null}
             </div>
             <div className="text-sm text-muted-foreground">
               {translate("resources.tasks.fields.due_short")}

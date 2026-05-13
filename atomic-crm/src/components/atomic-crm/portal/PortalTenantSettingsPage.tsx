@@ -48,6 +48,7 @@ type SettingsRow = {
   widget_position: string;
   crm_module_enabled: boolean;
   widget_module_enabled: boolean;
+  email_auto_merge_enabled?: boolean;
 };
 
 function timeInputValue(pg: string | null | undefined): string {
@@ -84,6 +85,7 @@ export function PortalTenantSettingsPage() {
   const [color, setColor] = useState("#6366f1");
   const [welcome, setWelcome] = useState("");
   const [position, setPosition] = useState("bottom-right");
+  const [emailAutoMerge, setEmailAutoMerge] = useState(true);
 
   useEffect(() => {
     if (!row) return;
@@ -95,6 +97,7 @@ export function PortalTenantSettingsPage() {
     setColor(row.widget_primary_color);
     setWelcome(row.widget_welcome_message);
     setPosition(row.widget_position);
+    setEmailAutoMerge(row.email_auto_merge_enabled !== false);
   }, [row]);
 
   const embedSnippet =
@@ -138,6 +141,7 @@ export function PortalTenantSettingsPage() {
         widget_primary_color: color,
         widget_welcome_message: welcome,
         widget_position: position,
+        email_auto_merge_enabled: emailAutoMerge,
       };
       const { error } = await getSupabaseClient()
         .from("tenant_settings")
@@ -388,6 +392,42 @@ export function PortalTenantSettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <PortalSettingsSandbox />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Email-to-Case</CardTitle>
+                    <CardDescription>
+                      Configure how inbound emails are handled for support cases.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Auto-merge duplicate emails</Label>
+                        <p className="text-xs text-muted-foreground">
+                          When enabled, emails from the same sender with nearly identical
+                          subjects are automatically added to the existing case instead of
+                          creating a new one.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={emailAutoMerge}
+                        onClick={() => setEmailAutoMerge(!emailAutoMerge)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                          emailAutoMerge ? "bg-primary" : "bg-input"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition-transform ${
+                            emailAutoMerge ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </CardContent>
                 </Card>
 

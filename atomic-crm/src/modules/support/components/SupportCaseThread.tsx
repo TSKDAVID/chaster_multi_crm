@@ -546,6 +546,9 @@ export function SupportCaseThread({
                         {formatThreadTime(m.created_at)}
                       </span>
                     ) : null}
+                    {m.edited_at ? (
+                      <span className="text-[10px] opacity-60 italic">(edited)</span>
+                    ) : null}
                   </div>
                   {m.body.trim() ? (
                     <p
