@@ -7,7 +7,7 @@
 
 alter table public.tasks
     add column case_id uuid references public.support_cases (id) on delete set null,
-    add column deal_id uuid references public.deals (id) on delete set null,
+    add column deal_id bigint references public.deals (id) on delete set null,
     add column assigned_to uuid references auth.users (id),
     add column delegated_by uuid references auth.users (id),
     add column delegated_at timestamptz,
@@ -17,7 +17,7 @@ alter table public.tasks
         check (status in ('pending', 'in_progress', 'completed', 'cancelled')),
     add column completed_at timestamptz,
     add column recurring_rule text,
-    add column parent_task_id uuid references public.tasks (id) on delete set null;
+    add column parent_task_id bigint references public.tasks (id) on delete set null;
 
 -- Backfill status from done_date for existing tasks
 update public.tasks
@@ -146,7 +146,7 @@ begin
         if not exists (
             select 1 from public.tasks inst
             where inst.parent_task_id = v_template.id
-              and inst.due_date = v_next_due::text
+              and inst.due_date::date = v_next_due
         ) then
             insert into public.tasks (
                 contact_id, type, text, due_date, sales_id, tenant_id,
@@ -155,7 +155,7 @@ begin
                 v_template.contact_id,
                 v_template.type,
                 v_template.text,
-                v_next_due::text,
+                v_next_due::timestamptz,
                 v_template.sales_id,
                 v_template.tenant_id,
                 v_template.case_id,

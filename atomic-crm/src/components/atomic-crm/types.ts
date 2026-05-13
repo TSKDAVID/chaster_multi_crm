@@ -165,7 +165,7 @@ export type Task = {
   sales_id?: Identifier;
   tenant_id?: string;
   case_id?: string | null;
-  deal_id?: string | null;
+  deal_id?: number | null;
   assigned_to?: string | null;
   delegated_by?: string | null;
   delegated_at?: string | null;
@@ -173,7 +173,7 @@ export type Task = {
   status?: "pending" | "in_progress" | "completed" | "cancelled";
   completed_at?: string | null;
   recurring_rule?: string | null;
-  parent_task_id?: string | null;
+  parent_task_id?: number | null;
 } & Pick<RaRecord, "id">;
 
 export type ActivityCompanyCreated = {
