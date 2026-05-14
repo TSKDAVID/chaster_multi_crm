@@ -2,193 +2,411 @@
 
 ## Project Overview
 
-**Chaster CRM** is a multi-tenant B2B platform evolving from the Atomic CRM template: React, shadcn-admin-kit, and Supabase. It provides contact management, task tracking, notes, email capture, and deal management with a Kanban board; roadmap includes HQ vs client portal, tenants, and strict RLS.
+**Chaster CRM** is a multi-tenant B2B platform evolving from the Atomic CRM template: React, shadcn-admin-kit, and Supabase. It provides contact management, task tracking, notes, email capture, and deal management with a Kanban board. It now includes a full HQ admin console, tenant client portal, Salesforce-grade support system, AI brain integration, and strict RLS.
 
 **Note:** Application source still lives under `src/components/atomic-crm/` (import path); renaming that folder is a separate refactor.
 
-## Development Commands
+---
 
-### Setup
-```bash
-make install          # Install dependencies (frontend, backend, local Supabase)
-make start            # Start full stack with real API (Supabase + Vite dev server)
-make stop             # Stop the stack
-make start-demo       # Start full-stack with FakeRest data provider
+## CRITICAL: How to Connect & Resume Work
+
+### Supabase Connection
+
+The project uses a **remote Supabase** instance (not local Docker). All connection details are in `.env.development`:
+
+```
+Supabase URL: https://fhzpjuumzlsuenqpglbj.supabase.co
+Publishable Key: (in .env.development)
 ```
 
-### Testing and Code Quality
+The Supabase CLI is already linked. To verify or re-link:
 
 ```bash
-make test             # Run unit tests (vitest)
-make typecheck        # Run TypeScript type checking
-make lint             # Run ESLint and Prettier checks
+cd atomic-crm
+npx supabase login
+npx supabase link --project-ref fhzpjuumzlsuenqpglbj
 ```
 
-### Building
+### Applying Database Migrations
+
+Whenever you create a new migration file under `supabase/migrations/`:
 
 ```bash
-make build            # Build production bundle (runs tsc + vite build)
+cd atomic-crm
+npx supabase db push     # interactive Y/n prompt, pushes to remote
 ```
 
-### Database Management
+**IMPORTANT:** PowerShell does NOT support `&&` or bash heredocs. Use separate commands or `;` separators.
 
-The database schema is defined declaratively in `supabase/schemas/` (source of truth). Migrations in `supabase/migrations/` are auto-generated and should generally not be edited directly — but sometimes manual adjustment is needed (e.g., replacing a DROP+CREATE with an ALTER TABLE RENAME for column renames). Function definitions in `02_functions.sql` must use the exact `pg_dump` format (run `npx supabase db dump --local --schema public`) to avoid phantom diffs.
+### Git Repository
 
-```bash
-npx supabase db diff --local -f <name>  # Generate migration from schema changes
-npx supabase migration up --local       # Apply migrations locally
-npx supabase db push                    # Push migrations to remote
-npx supabase db reset --local           # Reset local database (destructive)
+```
+Repo root:     c:\Users\Lenovo\Desktop\chaster\chaster_multi_crm
+Git remote:    https://github.com/TSKDAVID/chaster_multi_crm.git
+Branch:        main
+CRM app root:  c:\Users\Lenovo\Desktop\chaster\chaster_multi_crm\atomic-crm
 ```
 
-### Registry (Shadcn Components)
+### Brain API
 
-```bash
-make registry-gen     # Generate registry.json (runs automatically on pre-commit)
-make registry-build   # Build Shadcn registry
-```
+The Chaster Brain (AI backend) is hosted at `https://brain-vd2i.onrender.com`. The separate brain codebase lives at `c:\Users\Lenovo\Desktop\chaster\brain` (also mirrored in `chaster_multi_crm/chaster-brain`). It uses FastAPI + Groq LLM + Supabase for knowledge retrieval.
 
-## Architecture
+---
 
-### Technology Stack
+## Full Feature Inventory (Current State)
+
+### CRM Core (Atomic CRM base)
+- Contacts, companies, tasks, notes, deals (Kanban board), activity logs
+- CSV import/export for contacts
+- Tags, deal pipeline with stages, email capture
+- Supabase Auth (email, SSO)
+
+### Multi-Tenancy & Access Control
+- `tenants`, `tenant_members`, `tenant_settings` tables with full RLS
+- `chaster_team` table for HQ/internal staff with roles: `member`, `admin`, `super_admin`
+- `is_chaster_staff()`, `is_hq_support_role()`, `has_tenant_role()` helper functions
+- HQ vs Portal role separation (migration `20260424220000_hq_workspace_rbac_roles.sql`)
+- Tenant provisioning via Edge Function `hq_provision_tenant`
+
+### HQ Admin Console (`/hq/...`)
+- **Company Directory** (`/hq/companies`) — tenant list with stats, detail pages, member management
+- **Support Cases** (`/hq/support/cases`) — Salesforce-grade case queue with:
+  - 10 KPI cards with icons and color-coded borders (Open, In Progress, Pending Client, Resolved, Unassigned, Unread, New 7d, SLA Breached, Escalated, Avg First Response)
+  - 3 view modes: Table, Card grid, Compact list (persisted to localStorage)
+  - Quick-view filters (All, My Open, Unassigned, Unread)
+  - Status/tenant/assignee/unread filters + search
+  - **Rich case creation form** with 5 sections, 14+ fields:
+    - Section 1: Tenant picker + prospect toggle
+    - Section 2: Subject, description, category, priority, source selector, tags, related case
+    - Section 3: Contact/requester search
+    - Section 4: Initial message, attachments, internal note
+    - Section 5: Assignment (self/agent), follow-up date
+  - Pagination with 25 per page
+- **Case Detail** (`/hq/support/cases/:id`) — Full case management:
+  - SLA timer chips (response + resolution, color-coded urgency)
+  - Duplicate detection banner with merge/dismiss actions
+  - Merged case banner with undo action
+  - Tags display + inline tag management
+  - Related case card with link
+  - Follow-up date display/editor with overdue highlighting
+  - Status/priority/source management
+  - Staff assignment (self or pick from list)
+  - Internal notes (real-time via Supabase channel)
+  - Conversation thread with message editing indicator
+  - Prospect requester editing + tenant provisioning from case
+- **FAQ Management** (`/hq/support/faqs`)
+- **SLA Policies** (`/hq/support/sla-policies`) — CRUD for SLA policies with duration formatting
+- **Risk Alerts** (`/hq/risk-alerts`) — Risky user flagging dashboard with KPIs, filters, timeline
+- **Platform Team** (`/hq/platform-team`) — Chaster staff management
+- **Brain Sandbox** — AI testing tab for HQ staff
+
+### Portal (Tenant Client) (`/portal/...`)
+- **Dashboard** with activity, metrics
+- **Support Page** (`/portal/support`) — Portal-side support:
+  - Hero section with gradient, "How can we help?" heading, quick actions
+  - Case creation with priority selector (color dots), tags input, category, attachments
+  - Case list with status-colored left borders
+  - FAQ section with category grouping
+  - Better empty states
+- **Case Detail** (`/portal/support/cases/:id`)
+- **Settings** with email auto-merge toggle
+- **Quick Nav** component
+
+### Support System (Database Layer)
+- **Tables:** `support_cases`, `support_case_messages`, `support_case_internal_notes`, `support_requesters`, `support_faq_entries`, `support_case_read_state`, `support_case_staff_read_state`
+- **SLA:** `sla_policies`, `sla_escalation_log` with auto-deadline assignment triggers and cron-based breach detection (`sla_check_breaches_and_escalate`)
+- **Email-to-Case:** `email_subject_aliases`, `case_merge_log` with 4-tier threading (exact header match, subject alias, fuzzy duplicate, new case)
+- **Security:** `user_risk_flags` table, `check_support_case_rate_limit()` (5/hr hard cap, flags at 3+), `check_message_rate_limit()` (30/5min)
+- **RPCs:** `create_support_case` (portal), `hq_create_support_case` (HQ, enriched with 15 params), `hq_create_support_prospect_case`, `merge_support_cases`, `unmerge_support_case`
+- **Enrichment columns:** `tags text[]`, `follow_up_at timestamptz`, `related_case_id uuid`
+
+### Task System
+- Tasks linked to cases (`case_id`) and deals (`deal_id`)
+- Assignment, delegation, priority, status tracking
+- Recurring task rules with `generate_recurring_task_instances()` function
+- Dashboard widget with Today's/Overdue/Delegated/All Open cards
+
+### Messaging
+- Direct messages between users
+- Staff DMs and HQ internal channels
+- Unread tracking with read state tables
+
+### Edge Functions (Supabase)
+| Function | Purpose |
+|----------|---------|
+| `hq_provision_tenant` | Create new tenant with admin user, CRM company |
+| `provision_tenant` | Self-serve tenant creation |
+| `tenant_team` | Manage workspace members |
+| `hq_tenant_actions` | HQ admin actions on tenants |
+| `users` | Invite/update/delete CRM users |
+| `email_to_case` | Inbound email → support case (4-tier threading) |
+| `send_case_reply` | Outbound staff email replies (via Resend API) |
+| `postmark` | Inbound email webhook |
+| `merge_contacts` | Contact deduplication |
+| `mcp` | MCP server for Brain |
+| `delete_note_attachments` | Storage cleanup |
+| `update_password` | Password update helper |
+
+---
+
+## Database Migrations (chronological, all applied)
+
+| Migration | What it does |
+|-----------|-------------|
+| `20240730075029_init_db.sql` | Initial schema: contacts, companies, deals, tasks, notes, sales, tags |
+| `20260404140000_chaster_multitenancy.sql` | Tenants, tenant_members, tenant_settings, tenant-scoped RLS, seed tenant |
+| `20260404200000_provisioned_tenant_signup.sql` | Auto-assign provisioned users to their tenant on signup |
+| `20260405130000_hq_directory_and_stats.sql` | HQ directory views and tenant statistics |
+| `20260410120000_messaging.sql` | DM messaging system |
+| `20260415120000_support_portal.sql` | Portal support: cases, messages, FAQs, read state |
+| `20260416120000_support_hq_case_console.sql` | HQ case console: staff read state, internal notes, HQ RPC |
+| `20260418120000_support_prospect_cases.sql` | Prospect/requester support cases |
+| `20260420130000_chaster_brain_knowledge_chunks.sql` | Brain knowledge base tables |
+| `20260420140000_chaster_brain_app_configurations.sql` | Brain app configs |
+| `20260420150000_chaster_brain_control_plane.sql` | Brain runtime control, parameters, metrics |
+| `20260424220000_hq_workspace_rbac_roles.sql` | HQ/workspace role split RBAC |
+| `20260516120000_security_critical_sales_tenant_isolation.sql` | Sales table tenant isolation, edited_at on messages |
+| `20260516130000_security_high_rpc_roles_audit_messages.sql` | Tightened HQ RPC access, audit log policy |
+| `20260516140000_security_rate_limiting_risk_flags.sql` | Rate limiting, risk flags, injected into create_support_case |
+| `20260516150000_sla_tracking_escalation.sql` | SLA policies, deadlines, breach detection, escalation |
+| `20260516160000_tasks_overhaul.sql` | Tasks: case/deal linking, delegation, recurring, priority/status |
+| `20260516170000_email_to_case.sql` | Email threading, subject aliases, merge/unmerge RPCs |
+| `20260517120000_support_enrichment.sql` | Tags[], follow_up_at, related_case_id + enriched RPCs |
+
+---
+
+## Technology Stack
 
 - **Frontend**: React 19 + TypeScript + Vite
 - **Routing**: React Router v7
 - **Data Fetching**: React Query (TanStack Query)
-- **Forms**: React Hook Form
-- **Application Logic**: shadcn-admin-kit + ra-core (react-admin headless)
-- **UI Components**: Shadcn UI + Radix UI
+- **UI Components**: Shadcn UI + Radix UI (mutable dependencies in `src/components/ui/`)
 - **Styling**: Tailwind CSS v4
-- **Backend**: Supabase (PostgreSQL + REST API + Auth + Storage + Edge Functions)
+- **Backend**: Supabase (PostgreSQL + REST API + Auth + Storage + Edge Functions + Realtime)
+- **AI Backend**: FastAPI + Groq LLM + LangGraph + Redis (deployed on Render)
 - **Testing**: Vitest
+- **Translations**: ra-core (react-admin headless) `useTranslate()`
 
-### Directory Structure
+---
+
+## Directory Structure
 
 ```
-src/
-├── components/
-│   ├── admin/              # Shadcn Admin Kit components (mutable dependency)
-│   ├── atomic-crm/         # Main CRM application code (~15,000 LOC)
-│   │   ├── activity/       # Activity logs
-│   │   ├── companies/      # Company management
-│   │   ├── contacts/       # Contact management (includes CSV import/export)
-│   │   ├── dashboard/      # Dashboard widgets
-│   │   ├── deals/          # Deal pipeline (Kanban)
-│   │   ├── filters/        # List filters
-│   │   ├── layout/         # App layout components
-│   │   ├── login/          # Authentication pages
-│   │   ├── misc/           # Shared utilities
-│   │   ├── notes/          # Note management
-│   │   ├── providers/      # Data providers (Supabase + FakeRest)
-│   │   ├── root/           # Root CRM component
-│   │   ├── sales/          # Sales team management
-│   │   ├── settings/       # Settings page
-│   │   ├── simple-list/    # List components
-│   │   ├── tags/           # Tag management
-│   │   └── tasks/          # Task management
-│   ├── supabase/           # Supabase-specific auth components
-│   └── ui/                 # Shadcn UI components (mutable dependency)
-├── hooks/                  # Custom React hooks
-├── lib/                    # Utility functions
-└── App.tsx                 # Application entry point
-
-supabase/
-├── functions/              # Edge functions (user management, inbound email)
-├── migrations/             # Database migrations (auto-generated, do not edit directly)
-└── schemas/                # Declarative schema (source of truth for DB structure)
+chaster_multi_crm/                  # Git repo root
+├── atomic-crm/                     # Main CRM application
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── atomic-crm/         # Main CRM code
+│   │   │   │   ├── access/         # Auth guards, RBAC, permissions
+│   │   │   │   ├── hq/             # HQ admin pages (cases, risk alerts, SLA policies, etc.)
+│   │   │   │   ├── portal/         # Tenant portal pages (support, settings, dashboard)
+│   │   │   │   ├── brain/          # Brain sandbox UI
+│   │   │   │   ├── root/           # Root CRM component + routing
+│   │   │   │   ├── layout/         # Header, navigation, theme
+│   │   │   │   ├── dashboard/      # Dashboard widgets
+│   │   │   │   ├── companies/      # Company management
+│   │   │   │   ├── contacts/       # Contacts + CSV import/export
+│   │   │   │   ├── deals/          # Deal pipeline (Kanban)
+│   │   │   │   ├── tasks/          # Task management
+│   │   │   │   ├── notes/          # Note management
+│   │   │   │   ├── sales/          # Sales team management
+│   │   │   │   ├── providers/      # Supabase + FakeRest data providers
+│   │   │   │   └── ...
+│   │   │   ├── ui/                 # Shadcn UI components (mutable)
+│   │   │   └── admin/              # Shadcn Admin Kit (mutable)
+│   │   ├── modules/
+│   │   │   ├── support/            # Support types, hooks, components
+│   │   │   │   ├── supportTypes.ts # All support-related TypeScript types
+│   │   │   │   ├── hooks/          # useSupportUnread, etc.
+│   │   │   │   └── components/     # SupportCaseThread, etc.
+│   │   │   └── messaging/          # Messaging types, hooks, components
+│   │   ├── lib/                    # Utility functions (cn, etc.)
+│   │   └── App.tsx                 # Entry point
+│   ├── supabase/
+│   │   ├── migrations/             # 55+ migration files (all applied)
+│   │   ├── functions/              # 12 Edge Functions
+│   │   ├── schemas/                # Declarative schema (source of truth)
+│   │   └── config.toml             # project_id = "atomic-crm-demo"
+│   ├── .env.development            # Supabase URL + key (committed, safe to read)
+│   └── package.json
+├── chaster-brain/                  # Brain backend (mirrored from ../brain)
+│   ├── app/
+│   │   ├── main.py                 # FastAPI entrypoint
+│   │   ├── gateway/service.py      # Security validation
+│   │   ├── orchestrator/           # LangGraph: graph.py, nodes.py, llm.py
+│   │   ├── rag/retriever.py        # FAQ chunk retrieval
+│   │   ├── memory/manager.py       # Conversation memory (Redis + Supabase)
+│   │   └── db/client.py            # Supabase REST helper
+│   ├── dashboard/                  # TypeScript dashboard for Brain control
+│   └── .env.example                # Brain env vars template
+└── README.md
 ```
 
-### Key Architecture Patterns
+---
 
-For more details, check out the doc/src/content/docs/developers/architecture-choices.mdx document.
+## Development Commands
 
-#### Mutable Dependencies
+### Setup & Run
 
-The codebase includes mutable dependencies that should be modified directly if needed:
-- `src/components/admin/`: Shadcn Admin Kit framework code
-- `src/components/ui/`: Shadcn UI components
+```bash
+cd atomic-crm
+npm install
+npm run dev                        # Start Vite dev server at localhost:5173
+```
 
-#### Configuration via `<CRM>` Component
+### Database
 
-The `src/App.tsx` file renders the `<CRM>` component, which accepts props for domain-specific configuration:
-- `contactGender`: Gender options
-- `companySectors`: Company industry sectors
-- `dealCategories`, `dealStages`, `dealPipelineStatuses`: Deal configuration
-- `noteStatuses`: Note status options with colors
-- `taskTypes`: Task type options
-- `logo`, `title`: Branding
-- `lightTheme`, `darkTheme`: Theme customization
-- `disableTelemetry`: Opt-out of anonymous usage tracking
+```bash
+npx supabase db push               # Push pending migrations to remote (interactive)
+npx supabase db push --yes         # Non-interactive push
+```
 
-#### Database Views
+### Deploy Edge Functions
 
-Complex queries are handled via database views to simplify frontend code and reduce HTTP overhead. For example, `contacts_summary` provides aggregated contact data including task counts.
+```bash
+npx supabase functions deploy hq_provision_tenant
+npx supabase functions deploy email_to_case
+npx supabase functions deploy send_case_reply
+npx supabase functions deploy users
+npx supabase functions deploy tenant_team
+npx supabase functions deploy hq_tenant_actions
+```
 
-#### Database Triggers
+### Testing
 
-User data syncs between Supabase's `auth.users` table and the CRM's `sales` table via triggers (see `supabase/schemas/04_triggers.sql`).
+```bash
+make test                          # Vitest
+make typecheck                     # TypeScript
+make lint                          # ESLint + Prettier
+```
 
-#### Edge Functions
+---
 
-Located in `supabase/functions/`:
-- User management (creating/updating users, account disabling)
-- Inbound email webhook processing
+## Key Patterns & Conventions
 
-#### Data Providers
+### Supabase Client Usage (Frontend)
 
-Two data providers are available:
-1. **Supabase** (default): Production backend using PostgreSQL
-2. **FakeRest**: In-browser fake API for development/demos, resets on page reload
+```typescript
+import { getSupabaseClient } from "../providers/supabase/supabase";
 
-When using FakeRest, database views are emulated in the frontend. Test data generators are in `src/components/atomic-crm/providers/fakerest/dataGenerator/`.
+// Direct table query
+const { data, error } = await getSupabaseClient()
+  .from("support_cases")
+  .select("*, tenants(company_name), support_requesters(*)")
+  .order("updated_at", { ascending: false });
 
-#### Filter Syntax
+// RPC call
+const { data, error } = await getSupabaseClient().rpc("hq_create_support_case", {
+  p_tenant_id: tenantId,
+  p_subject: subject,
+  // ... params
+});
+```
 
-List filters follow the `ra-data-postgrest` convention with operator concatenation: `field_name@operator` (e.g., `first_name@eq`). The FakeRest adapter maps these to FakeRest syntax at runtime.
+### Access Control Guards
 
-## Development Workflows
+```tsx
+<ChasterHQGuard>           {/* Redirects non-HQ staff */}
+  <PermissionGate permission="hq.support.cases.read">
+    {/* Content */}
+  </PermissionGate>
+</ChasterHQGuard>
 
-### Path Aliases
+<TenantPortalGuard>         {/* Redirects non-tenant users */}
+  <PermissionGate permission="portal.support.view">
+    {/* Content */}
+  </PermissionGate>
+</TenantPortalGuard>
+```
 
-The project uses TypeScript path aliases configured in `tsconfig.json` and `components.json`:
-- `@/components` → `src/components`
-- `@/lib` → `src/lib`
-- `@/hooks` → `src/hooks`
-- `@/components/ui` → `src/components/ui`
+### Data Fetching Pattern
 
-### Adding Custom Fields
+All pages use `@tanstack/react-query` with Supabase:
 
-When modifying contact or company data structures:
-1. Edit the relevant schema file in `supabase/schemas/` (table in `01_tables.sql`, views in `03_views.sql`, etc.)
-2. Generate a migration: `npx supabase db diff --local -f <name>`
-3. Apply it: `npx supabase migration up --local`
-4. Update the sample CSV: `src/components/atomic-crm/contacts/contacts_export.csv`
-5. Update the import function: `src/components/atomic-crm/contacts/useContactImport.tsx`
-6. If using FakeRest, update data generators in `src/components/atomic-crm/providers/fakerest/dataGenerator/`
-7. Don't forget to update the related view (`contacts_summary`, `companies_summary`) in `03_views.sql`
-8. Don't forget the export functions
-9. Don't forget the contact merge logic
+```typescript
+const casesQ = useQuery({
+  queryKey: ["hq-support-cases"],
+  enabled: can("hq.support.cases.read"),
+  queryFn: async () => { /* supabase query */ },
+});
+```
 
-### Running with Test Data
+### Routing
 
-Import `test-data/contacts.csv` via the Contacts page → Import button.
+Routes are defined in `src/components/atomic-crm/root/CRM.tsx`. HQ routes are under `/hq/...`, portal under `/portal/...`.
 
-### Git Hooks
+### Translations
 
-- Pre-commit: Automatically runs `make registry-gen` to update `registry.json`
+Uses ra-core `useTranslate()`. Translation keys follow pattern `chaster.hq.support.*` and `chaster.portal.support.*`.
 
-### Accessing Local Services During Development
+### Component Library
 
-- Frontend: http://localhost:5173/
-- Supabase Dashboard: http://localhost:54323/
-- REST API: http://127.0.0.1:54321
-- Storage (attachments): http://localhost:54323/project/default/storage/buckets/attachments
-- Inbucket (email testing): http://localhost:54324/
+All UI uses shadcn/ui components from `@/components/ui/`:
+- `Card`, `Badge`, `Button`, `Input`, `Textarea`, `Select`, `Dialog`, `ToggleGroup`, `Table`, `Skeleton`, `Accordion`, `Breadcrumb`, `Separator`, `Checkbox`, `Label`
+- Icons from `lucide-react`
+- Utility: `cn()` from `@/lib/utils`
 
-## Important Notes
+### State Persistence
 
-- The codebase is intentionally small (~15,000 LOC in `src/components/atomic-crm`) for easy customization
-- Modify files in `src/components/admin` and `src/components/ui` directly - they are meant to be customized
-- Unit tests can be added in the `src/` directory (test files are named `*.test.ts` or `*.test.tsx`)
-- User deletion is not supported to avoid data loss; use account disabling instead
-- Filter operators must be supported by the `supabaseAdapter` when using FakeRest
+View preferences use `localStorage`:
+```typescript
+const [viewMode, setViewMode] = useState<ViewMode>(() => {
+  try { return (localStorage.getItem("hq-support-view-mode") as ViewMode) || "table"; } catch { return "table"; }
+});
+```
+
+---
+
+## TypeScript Types (Support Module)
+
+Key types in `src/modules/support/supportTypes.ts`:
+
+```typescript
+type SupportCaseRow = {
+  id: string; tenant_id: string | null; support_requester_id: string | null;
+  case_number: string; subject: string; description?: string;
+  category: SupportCaseCategory; status: SupportCaseStatus;
+  created_by: string | null; assigned_to: string | null;
+  priority: SupportCasePriority; source: SupportCaseSource;
+  // SLA
+  first_response_due_at?: string | null; resolution_due_at?: string | null;
+  sla_response_breached?: boolean; sla_resolution_breached?: boolean;
+  escalation_level?: number;
+  // Email-to-case
+  source_email?: string | null; email_thread_id?: string | null;
+  possible_duplicate_of?: string | null; merged_into_case_id?: string | null;
+  // Enrichment
+  tags?: string[]; follow_up_at?: string | null; related_case_id?: string | null;
+};
+
+type SupportCaseStatus = "open" | "in_progress" | "pending_client" | "resolved";
+type SupportCasePriority = "low" | "medium" | "high" | "urgent";
+type SupportCaseSource = "portal" | "phone" | "email" | "hq" | "other" | "prospect";
+type SupportCaseCategory = "billing" | "technical" | "account" | "ai_kb" | "widget" | "other";
+```
+
+---
+
+## Known Issues & Gotchas
+
+1. **PowerShell syntax**: This is a Windows project. PowerShell does NOT support `&&`, heredocs (`<<'EOF'`), or `wc`. Use `;` to chain commands, simple `-m "message"` for git commits.
+2. **`hq_create_support_prospect_case` RPC**: This RPC has NOT been enriched with the new params (tags, follow_up, etc.). Only the standard `hq_create_support_case` and `create_support_case` RPCs have the full parameter set.
+3. **Edge Functions deployment**: Migrations don't deploy functions. After modifying Edge Function code, deploy manually with `npx supabase functions deploy <name>`.
+4. **Supabase types**: The project does NOT use auto-generated Supabase types. Types are manually maintained in `supportTypes.ts` and `types.ts`.
+5. **`support_case_internal_notes`**: Already exists from migration `20260416120000`. Used for staff-only notes on cases.
+6. **Existing `description` column**: `support_cases.description` already existed before enrichment. The enrichment migration added `tags`, `follow_up_at`, and `related_case_id`.
+
+---
+
+## What's Next (Potential Future Work)
+
+Based on the conversation history, these areas have been discussed or are natural next steps:
+
+- **Widget integration**: The Brain has a public widget API (`/v1/handshake`, `/v1/process`) ready for embedding
+- **Sortable table headers**: Mentioned in the plan but not yet implemented for the table view
+- **Row hover quick actions**: Mentioned for table view (assign, change status) but not yet implemented
+- **`PortalSupportCasePage.tsx` polish**: Plan mentions tags display and related case note for the portal case detail page — not yet done
+- **Collapsible form sections**: The HQ creation form has section headers but sections are not collapsible yet
+- **Email reply from HQ**: The `send_case_reply` Edge Function exists but may need UI integration
+- **Recurring task cron**: `generate_recurring_task_instances()` exists but needs a pg_cron schedule
+- **Additional SLA cron setup**: `sla_check_breaches_and_escalate()` needs pg_cron to run periodically
