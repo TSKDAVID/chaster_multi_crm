@@ -4,6 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   ArrowUpRight,
   CheckCircle,
   ChevronUp,
@@ -74,6 +77,12 @@ import type {
 } from "@/modules/support/supportTypes";
 import { useSupportStaffUnreadTotal } from "@/modules/support/hooks/useSupportUnread";
 import { useSupportCaseSearch } from "@/modules/support/hooks/useSupportCaseSearch";
+import { SupportQueueInsights } from "@/modules/support/components/SupportQueueInsights";
+import {
+  sortSupportCases,
+  type SupportCaseSortDir,
+  type SupportCaseSortField,
+} from "@/modules/support/lib/sortSupportCases";
 import { CHASTER_SELECT_NONE } from "../sales/SalesProvisioningInputs";
 import { UnreadBadge } from "@/modules/messaging/components/UnreadBadge";
 import { cn } from "@/lib/utils";
@@ -184,6 +193,27 @@ export function HqSupportCasesPage() {
   const ftsQ = useSupportCaseSearch("hq", debouncedSearch);
   const [tenantFilter, setTenantFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [slaAtRiskOnly, setSlaAtRiskOnly] = useState(false);
+  const [sortField, setSortField] = useState<SupportCaseSortField>(() => {
+    try {
+      return (
+        (localStorage.getItem("hq-support-sort-field") as SupportCaseSortField) ||
+        "updated_at"
+      );
+    } catch {
+      return "updated_at";
+    }
+  });
+  const [sortDir, setSortDir] = useState<SupportCaseSortDir>(() => {
+    try {
+      return (
+        (localStorage.getItem("hq-support-sort-dir") as SupportCaseSortDir) || "desc"
+      );
+    } catch {
+      return "desc";
+    }
+  });
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try { return (localStorage.getItem("hq-support-view-mode") as ViewMode) || "table"; } catch { return "table"; }
@@ -232,6 +262,14 @@ export function HqSupportCasesPage() {
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [tenantPickerOpen]);
   useEffect(() => { try { localStorage.setItem("hq-support-view-mode", viewMode); } catch {} }, [viewMode]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("hq-support-sort-field", sortField);
+      localStorage.setItem("hq-support-sort-dir", sortDir);
+    } catch {
+      /* ignore */
+    }
+  }, [sortField, sortDir]);
 
   const [prospectOrg, setProspectOrg] = useState("");
   const [prospectFirst, setProspectFirst] = useState("");
@@ -498,6 +536,16 @@ export function HqSupportCasesPage() {
         out = out.filter((c) => c.assigned_to === assigneeFilter);
       }
     }
+    if (priorityFilter !== "all") {
+      out = out.filter((c) => c.priority === priorityFilter);
+    }
+    if (slaAtRiskOnly) {
+      out = out.filter(
+        (c) =>
+          c.status !== "resolved" &&
+          (c.sla_response_breached || c.sla_resolution_breached),
+      );
+    }
 
     if (q.length >= 2 && ftsQ.data) {
       const ids = new Set(ftsQ.data);
@@ -534,12 +582,25 @@ export function HqSupportCasesPage() {
     unreadOnly,
     tenantFilter,
     assigneeFilter,
+    priorityFilter,
+    slaAtRiskOnly,
     search,
     ftsQ.data,
     unreadIds,
   ]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(
+    () =>
+      sortSupportCases(
+        filtered,
+        sortField,
+        sortDir,
+        assigneeNamesQ.data ?? {},
+      ),
+    [filtered, sortField, sortDir, assigneeNamesQ.data],
+  );
+
+  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -553,8 +614,71 @@ export function HqSupportCasesPage() {
   const safePage = Math.min(page, pageCount - 1);
   const paged = useMemo(() => {
     const start = safePage * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, safePage]);
+    return sorted.slice(start, start + PAGE_SIZE);
+  }, [sorted, safePage]);
+
+  const toggleSort = (field: SupportCaseSortField) => {
+    setPage(0);
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir(field === "case_number" || field === "subject" || field === "tenant" ? "asc" : "desc");
+    }
+  };
+
+  const sortLabel = (field: SupportCaseSortField) => {
+    const key = `chaster.hq.support.sort_${field}` as const;
+    return translate(key);
+  };
+
+  const applyInsightsFilter = (view: "my_open" | "unassigned" | "unread" | "sla") => {
+    setPage(0);
+    setSlaAtRiskOnly(view === "sla");
+    if (view === "sla") {
+      setQuickView("all");
+      setStatusFilter("all");
+      setUnreadOnly(false);
+      return;
+    }
+    setSlaAtRiskOnly(false);
+    setQuickView(view);
+    setStatusFilter("all");
+    setUnreadOnly(false);
+  };
+
+  const SortableHead = ({
+    field,
+    children,
+  }: {
+    field: SupportCaseSortField;
+    children: React.ReactNode;
+  }) => {
+    const active = sortField === field;
+    return (
+      <TableHead>
+        <button
+          type="button"
+          onClick={() => toggleSort(field)}
+          className={cn(
+            "inline-flex items-center gap-1 font-medium hover:text-foreground",
+            active ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {children}
+          {active ? (
+            sortDir === "asc" ? (
+              <ArrowUp className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5" />
+            )
+          ) : (
+            <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+          )}
+        </button>
+      </TableHead>
+    );
+  };
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -789,6 +913,8 @@ export function HqSupportCasesPage() {
     !unreadOnly &&
     tenantFilter === "all" &&
     assigneeFilter === "all" &&
+    priorityFilter === "all" &&
+    !slaAtRiskOnly &&
     !search.trim();
 
   return (
@@ -915,25 +1041,21 @@ export function HqSupportCasesPage() {
               "border-l-cyan-500",
             )}
             {kpiCard(
-              "SLA Breached",
+              translate("chaster.hq.support.kpi_sla_breached"),
               kpis.slaBreached,
-              () => {
-                setQuickView("all");
-                setStatusFilter("all");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              false,
+              () => applyInsightsFilter("sla"),
+              slaAtRiskOnly,
               <AlertTriangle className="h-4 w-4" />,
               "border-l-red-500",
             )}
             {kpiCard(
-              "Escalated",
+              translate("chaster.hq.support.kpi_escalated"),
               kpis.escalated,
               () => {
                 setQuickView("all");
                 setStatusFilter("all");
                 setUnreadOnly(false);
+                setSlaAtRiskOnly(false);
                 setPage(0);
               },
               false,
@@ -941,7 +1063,7 @@ export function HqSupportCasesPage() {
               "border-l-purple-500",
             )}
             {kpiCard(
-              "Avg First Response",
+              translate("chaster.hq.support.kpi_avg_first_response"),
               kpis.avgFirstResponse,
               () => {},
               false,
@@ -982,6 +1104,7 @@ export function HqSupportCasesPage() {
             </ToggleGroup>
           </div>
 
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">
@@ -990,6 +1113,14 @@ export function HqSupportCasesPage() {
               <CardDescription>
                 {translate("chaster.hq.support.console_queue_hint")}
               </CardDescription>
+              <div className="xl:hidden pt-3">
+                <SupportQueueInsights
+                  cases={rows}
+                  unreadIds={unreadIds}
+                  myId={myId ?? undefined}
+                  onFilter={applyInsightsFilter}
+                />
+              </div>
               <div className="flex flex-col gap-3 pt-2">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1123,7 +1254,109 @@ export function HqSupportCasesPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">
+                      {translate("chaster.hq.support.filter_priority")}
+                    </Label>
+                    <Select
+                      value={priorityFilter}
+                      onValueChange={(v) => {
+                        setPriorityFilter(v);
+                        setPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          {translate("chaster.hq.support.filter_all")}
+                        </SelectItem>
+                        <SelectItem value="low">
+                          {translate("chaster.hq.support.priority_low")}
+                        </SelectItem>
+                        <SelectItem value="medium">
+                          {translate("chaster.hq.support.priority_medium")}
+                        </SelectItem>
+                        <SelectItem value="high">
+                          {translate("chaster.hq.support.priority_high")}
+                        </SelectItem>
+                        <SelectItem value="urgent">
+                          {translate("chaster.hq.support.priority_urgent")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">
+                      {translate("chaster.hq.support.sort_label")}
+                    </Label>
+                    <Select
+                      value={`${sortField}:${sortDir}`}
+                      onValueChange={(v) => {
+                        const [field, dir] = v.split(":") as [
+                          SupportCaseSortField,
+                          SupportCaseSortDir,
+                        ];
+                        setSortField(field);
+                        setSortDir(dir);
+                        setPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="w-[220px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(
+                          [
+                            "updated_at",
+                            "created_at",
+                            "case_number",
+                            "subject",
+                            "tenant",
+                            "priority",
+                            "status",
+                            "assigned",
+                          ] as SupportCaseSortField[]
+                        ).flatMap((field) =>
+                          (["asc", "desc"] as SupportCaseSortDir[]).map((dir) => (
+                            <SelectItem key={`${field}:${dir}`} value={`${field}:${dir}`}>
+                              {sortLabel(field)} (
+                              {dir === "asc"
+                                ? translate("chaster.hq.support.sort_asc_short")
+                                : translate("chaster.hq.support.sort_desc_short")}
+                              )
+                            </SelectItem>
+                          )),
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+                {!filtersDefault ? (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setQuickView("all");
+                        setStatusFilter("all");
+                        setUnreadOnly(false);
+                        setTenantFilter("all");
+                        setAssigneeFilter("all");
+                        setPriorityFilter("all");
+                        setSlaAtRiskOnly(false);
+                        setSearch("");
+                        setPage(0);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      {translate("chaster.hq.support.clear_filters")}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1149,41 +1382,53 @@ export function HqSupportCasesPage() {
                 </div>
               ) : (
                 <>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                    <span>
+                      {translate("chaster.hq.support.queue_results", {
+                        shown: paged.length,
+                        total: sorted.length,
+                        all: rows.length,
+                      })}
+                    </span>
+                    <span className="text-xs">
+                      {sortLabel(sortField)} ({sortDir === "asc" ? "↑" : "↓"})
+                    </span>
+                  </div>
                   {viewMode === "table" ? (
                   <div className="rounded-md border overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>
+                          <SortableHead field="case_number">
                             {translate("chaster.hq.support.col_case_number")}
-                          </TableHead>
-                          <TableHead>
+                          </SortableHead>
+                          <SortableHead field="subject">
                             {translate("chaster.hq.support.col_case")}
-                          </TableHead>
-                          <TableHead>
+                          </SortableHead>
+                          <SortableHead field="tenant">
                             {translate("chaster.hq.support.col_tenant")}
-                          </TableHead>
-                          <TableHead>
+                          </SortableHead>
+                          <SortableHead field="status">
                             {translate("chaster.hq.support.col_status")}
-                          </TableHead>
-                          <TableHead>
+                          </SortableHead>
+                          <SortableHead field="priority">
                             {translate("chaster.hq.support.col_priority")}
-                          </TableHead>
+                          </SortableHead>
                           <TableHead>
                             {translate("chaster.hq.support.col_category")}
                           </TableHead>
-                          <TableHead>
+                          <SortableHead field="assigned">
                             {translate("chaster.hq.support.col_assigned")}
-                          </TableHead>
+                          </SortableHead>
                           <TableHead>
                             {translate("chaster.hq.support.col_preview")}
                           </TableHead>
-                          <TableHead>
+                          <SortableHead field="updated_at">
                             {translate("chaster.hq.support.col_updated")}
-                          </TableHead>
-                          <TableHead>
+                          </SortableHead>
+                          <SortableHead field="created_at">
                             {translate("chaster.hq.support.col_created")}
-                          </TableHead>
+                          </SortableHead>
                           <TableHead>SLA</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1399,6 +1644,16 @@ export function HqSupportCasesPage() {
               )}
             </CardContent>
           </Card>
+
+          <aside className="hidden xl:block space-y-4 xl:sticky xl:top-6 xl:self-start">
+            <SupportQueueInsights
+              cases={rows}
+              unreadIds={unreadIds}
+              myId={myId ?? undefined}
+              onFilter={applyInsightsFilter}
+            />
+          </aside>
+          </div>
 
           <Dialog
             open={newOpen}
