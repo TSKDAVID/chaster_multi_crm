@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { Link, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
@@ -55,6 +56,7 @@ import { SupportCaseThread } from "@/modules/support/components/SupportCaseThrea
 import { CasePresenceBanner } from "@/modules/support/components/CasePresenceBanner";
 import { CsatPrompt } from "@/modules/support/components/CsatPrompt";
 import { useCasePresence } from "@/modules/support/hooks/useCasePresence";
+import { safeSelectValue } from "@/modules/support/lib/selectValue";
 import { useChasterAccess } from "../access/chasterAccessContext";
 import type {
   SupportCasePriority,
@@ -624,6 +626,27 @@ export function HqSupportCaseDetailPage() {
 
   const isProspectCase = Boolean(c && c.tenant_id == null);
 
+  const STATUS_OPTIONS = [
+    "open",
+    "in_progress",
+    "pending_client",
+    "resolved",
+  ] as const satisfies readonly SupportCaseStatus[];
+  const PRIORITY_OPTIONS = ["low", "medium", "high", "urgent"] as const satisfies readonly SupportCasePriority[];
+  const SOURCE_OPTIONS = [
+    "portal",
+    "phone",
+    "email",
+    "hq",
+    "other",
+    "prospect",
+  ] as const satisfies readonly SupportCaseSource[];
+
+  const safeStatus = safeSelectValue(status, STATUS_OPTIONS, "open");
+  const safePriority = safeSelectValue(priority, PRIORITY_OPTIONS, "medium");
+  const safeSource = safeSelectValue(source, SOURCE_OPTIONS, "other");
+  const caseTags = Array.isArray(c?.tags) ? c!.tags! : [];
+
   return (
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
@@ -851,7 +874,15 @@ export function HqSupportCaseDetailPage() {
                     <div className="space-y-4 p-4 sm:p-5">
                       <CasePresenceBanner peers={presencePeers} variant="hq" />
                       {caseId ? (
-                        <SupportCaseThread caseId={caseId} variant="hq" />
+                        <ErrorBoundary
+                          fallback={
+                            <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                              {translate("chaster.hq.support.thread_load_error")}
+                            </p>
+                          }
+                        >
+                          <SupportCaseThread caseId={caseId} variant="hq" />
+                        </ErrorBoundary>
                       ) : null}
                     </div>
                   </CardContent>
@@ -1024,7 +1055,7 @@ export function HqSupportCaseDetailPage() {
                             {translate("chaster.hq.support.status_label")}
                           </Label>
                           <Select
-                            value={status}
+                            value={safeStatus}
                             onValueChange={(v) =>
                               setStatus(v as SupportCaseStatus)
                             }
@@ -1059,7 +1090,7 @@ export function HqSupportCaseDetailPage() {
                             {translate("chaster.hq.support.record_priority")}
                           </Label>
                           <Select
-                            value={priority}
+                            value={safePriority}
                             onValueChange={(v) =>
                               setPriority(v as SupportCasePriority)
                             }
@@ -1088,7 +1119,7 @@ export function HqSupportCaseDetailPage() {
                             {translate("chaster.hq.support.record_source")}
                           </Label>
                           <Select
-                            value={source}
+                            value={safeSource}
                             onValueChange={(v) =>
                               setSource(v as SupportCaseSource)
                             }
@@ -1150,11 +1181,11 @@ export function HqSupportCaseDetailPage() {
                             Tags
                           </Label>
                           <div className="flex flex-wrap gap-1.5">
-                            {(c.tags ?? []).map((tag) => (
+                            {caseTags.map((tag) => (
                               <Badge key={tag} variant="secondary" className="gap-1 pr-1 text-xs">
                                 {tag}
                                 <button type="button" className="ml-0.5 h-3.5 w-3.5 rounded-full hover:bg-destructive/20 inline-flex items-center justify-center" onClick={async () => {
-                                  const updated = (c.tags ?? []).filter((t) => t !== tag);
+                                  const updated = caseTags.filter((t) => t !== tag);
                                   const { error } = await getSupabaseClient().from("support_cases").update({ tags: updated }).eq("id", caseId!);
                                   if (error) notify(error.message, { type: "error" });
                                   else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
@@ -1164,7 +1195,7 @@ export function HqSupportCaseDetailPage() {
                               </Badge>
                             ))}
                           </div>
-                          <TagInput caseId={caseId!} currentTags={c.tags ?? []} onUpdate={() => void qc.invalidateQueries({ queryKey: ["support-case", caseId] })} />
+                          <TagInput caseId={caseId!} currentTags={caseTags} onUpdate={() => void qc.invalidateQueries({ queryKey: ["support-case", caseId] })} />
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Button

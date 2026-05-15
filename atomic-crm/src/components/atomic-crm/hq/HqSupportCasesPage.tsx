@@ -203,7 +203,7 @@ export function HqSupportCasesPage() {
   const [newTagInput, setNewTagInput] = useState("");
   const [newFollowUp, setNewFollowUp] = useState("");
   const [newInternalNote, setNewInternalNote] = useState("");
-  const [newAssignTo, setNewAssignTo] = useState<string>("");
+  const [newAssignTo, setNewAssignTo] = useState<string>(CHASTER_SELECT_NONE);
   const [newDescription, setNewDescription] = useState("");
   const [newAttachmentFiles, setNewAttachmentFiles] = useState<File[]>([]);
   const [requesterSearchQ, setRequesterSearchQ] = useState("");
@@ -609,7 +609,7 @@ export function HqSupportCasesPage() {
       setNewTagInput("");
       setNewFollowUp("");
       setNewInternalNote("");
-      setNewAssignTo("");
+      setNewAssignTo(CHASTER_SELECT_NONE);
       setNewDescription("");
       setNewAttachmentFiles([]);
       setRequesterSearchQ("");
@@ -669,7 +669,7 @@ export function HqSupportCasesPage() {
       setNewTagInput("");
       setNewFollowUp("");
       setNewInternalNote("");
-      setNewAssignTo("");
+      setNewAssignTo(CHASTER_SELECT_NONE);
       setNewDescription("");
       setNewAttachmentFiles([]);
       setRequesterSearchQ("");
@@ -1416,7 +1416,7 @@ export function HqSupportCasesPage() {
               }
             }}
           >
-            <DialogContent className="flex max-h-[min(90vh,820px)] w-[calc(100vw-1.5rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:w-full">
+            <DialogContent className="flex max-h-[min(92vh,900px)] w-[calc(100vw-2rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:w-full">
               <DialogHeader className="shrink-0 space-y-1.5 px-6 pt-6 pr-14 text-left">
                 <DialogTitle>
                   {translate("chaster.hq.support.new_case_title")}
@@ -1427,7 +1427,7 @@ export function HqSupportCasesPage() {
               </DialogHeader>
               <div
                 className={cn(
-                  "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 py-2",
+                  "min-h-0 flex-1 space-y-8 overflow-y-auto overscroll-contain px-8 py-5",
                   "[scrollbar-width:thin] [scrollbar-color:hsl(var(--border))_transparent]",
                   "[&::-webkit-scrollbar]:w-2",
                   "[&::-webkit-scrollbar-track]:bg-transparent",
@@ -1683,31 +1683,40 @@ export function HqSupportCasesPage() {
                 </div>
 
                 {/* Section 2: Case Details */}
-                <div className="space-y-3 border-t pt-4">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Case Details</h3>
-                  <div className="space-y-1">
-                    <Label>{translate("chaster.hq.support.new_case_subject")}</Label>
-                    <Input
-                      value={newSubject}
-                      onChange={(e) => setNewSubject(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Description</Label>
-                    <p className="text-xs text-muted-foreground">Brief summary of the case (separate from the initial message)</p>
-                    <Input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Short summary..." />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>
-                      {translate("chaster.hq.support.new_case_category")}
-                    </Label>
+                <section className="space-y-5 rounded-xl border border-border/60 bg-muted/10 p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                    Case details
+                  </h3>
+                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                    <div className="space-y-1.5 lg:col-span-2">
+                      <Label>{translate("chaster.hq.support.new_case_subject")}</Label>
+                      <Input
+                        value={newSubject}
+                        onChange={(e) => setNewSubject(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-1.5 lg:col-span-2">
+                      <Label>Description</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Brief summary of the case (separate from the initial message)
+                      </p>
+                      <Input
+                        value={newDescription}
+                        onChange={(e) => setNewDescription(e.target.value)}
+                        placeholder="Short summary..."
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>{translate("chaster.hq.support.new_case_category")}</Label>
                     <Select
                       value={newCategory}
                       onValueChange={(v) =>
                         setNewCategory(v as SupportCaseCategory)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1728,17 +1737,15 @@ export function HqSupportCasesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label>
-                      {translate("chaster.hq.support.new_case_priority")}
-                    </Label>
+                  <div className="space-y-1.5">
+                    <Label>{translate("chaster.hq.support.new_case_priority")}</Label>
                     <Select
                       value={newPriority}
                       onValueChange={(v) =>
                         setNewPriority(v as SupportCasePriority)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1757,18 +1764,29 @@ export function HqSupportCasesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label>Case Origin / Source</Label>
+                  <div className="space-y-1.5">
+                    <Label>Case origin / source</Label>
                     <Select value={newSource} onValueChange={(v) => setNewSource(v as SupportCaseSource)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {(["portal", "phone", "email", "chat", "social_media", "hq", "other"] as string[]).map((k) => (
-                          <SelectItem key={k} value={k}>{k.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}</SelectItem>
+                        {(
+                          [
+                            "portal",
+                            "phone",
+                            "email",
+                            "hq",
+                            "other",
+                            "prospect",
+                          ] as SupportCaseSource[]
+                        ).map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {translate(sourceLabelKey(k))}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5 lg:col-span-2">
                     <Label>Tags</Label>
                     <div className="flex flex-wrap gap-1.5 mb-1.5">
                       {newTags.map((tag) => (
@@ -1785,8 +1803,8 @@ export function HqSupportCasesPage() {
                       <Button type="button" variant="outline" size="sm" disabled={!newTagInput.trim()} onClick={() => { const t = newTagInput.trim().toLowerCase(); if (t && !newTags.includes(t)) setNewTags((p) => [...p, t]); setNewTagInput(""); }}>Add</Button>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label>Related Case</Label>
+                  <div className="space-y-1.5 lg:col-span-2">
+                    <Label>Related case</Label>
                     <Input value={relatedCaseSearchQ} onChange={(e) => { setRelatedCaseSearchQ(e.target.value); if (!e.target.value) setSelectedRelatedCaseId(""); }} placeholder="Search by case number or subject..." />
                     {relatedCaseResultsQ.data && relatedCaseResultsQ.data.length > 0 && relatedCaseSearchQ.trim().length >= 2 && !selectedRelatedCaseId ? (
                       <div className="rounded-md border bg-popover p-1 max-h-40 overflow-y-auto">
@@ -1800,12 +1818,15 @@ export function HqSupportCasesPage() {
                     ) : null}
                     {selectedRelatedCaseId ? <p className="text-xs text-green-600">Related case linked</p> : null}
                   </div>
-                </div>
+                  </div>
+                </section>
 
                 {/* Section 3: Contact / Requester */}
                 {!showProspectFields ? (
-                  <div className="space-y-1 border-t pt-4">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">Contact / Requester</h3>
+                  <section className="space-y-3 rounded-xl border border-border/60 bg-muted/10 p-5 sm:p-6">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                      Contact / requester
+                    </h3>
                     <Input value={requesterSearchQ} onChange={(e) => { setRequesterSearchQ(e.target.value); if (!e.target.value) setSelectedRequesterId(""); }} placeholder="Search contacts by name or email..." />
                     {requesterResultsQ.data && requesterResultsQ.data.length > 0 && requesterSearchQ.trim().length >= 2 && !selectedRequesterId ? (
                       <div className="rounded-md border bg-popover p-1 max-h-40 overflow-y-auto">
@@ -1818,15 +1839,17 @@ export function HqSupportCasesPage() {
                       </div>
                     ) : null}
                     {selectedRequesterId ? <p className="text-xs text-green-600">Contact linked</p> : null}
-                  </div>
+                  </section>
                 ) : null}
 
                 {/* Section 4: Message & Notes */}
-                <div className="space-y-3 border-t pt-4">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Message &amp; Notes</h3>
-                  <div className="space-y-1">
-                    <Label>Initial Message *</Label>
-                    <Textarea rows={4} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="resize-y" placeholder="Describe the issue..." />
+                <section className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                    Message &amp; notes
+                  </h3>
+                  <div className="space-y-1.5">
+                    <Label>Initial message *</Label>
+                    <Textarea rows={6} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="min-h-[9rem] resize-y" placeholder="Describe the issue..." />
                   </div>
                   <div className="space-y-1">
                     <Label>Attachments</Label>
@@ -1835,21 +1858,26 @@ export function HqSupportCasesPage() {
                   </div>
                   <div className="space-y-1">
                     <Label>Internal Note (staff only)</Label>
-                    <Textarea rows={2} value={newInternalNote} onChange={(e) => setNewInternalNote(e.target.value)} className="resize-y" placeholder="Private note visible only to staff..." />
+                    <Textarea rows={3} value={newInternalNote} onChange={(e) => setNewInternalNote(e.target.value)} className="min-h-[5rem] resize-y" placeholder="Private note visible only to staff..." />
                   </div>
-                </div>
+                </section>
 
                 {/* Section 5: Assignment & Scheduling */}
-                <div className="space-y-3 border-t pt-4">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Assignment &amp; Scheduling</h3>
+                <section className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                    Assignment &amp; scheduling
+                  </h3>
                   <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={newAssignSelf} onChange={(e) => { setNewAssignSelf(e.target.checked); if (e.target.checked) setNewAssignTo(""); }} />
+                    <input type="checkbox" checked={newAssignSelf} onChange={(e) => { setNewAssignSelf(e.target.checked); if (e.target.checked) setNewAssignTo(CHASTER_SELECT_NONE); }} />
                     {translate("chaster.hq.support.new_case_assign_self")}
                   </label>
                   {!newAssignSelf ? (
                     <div className="space-y-1">
                       <Label>Assign to Agent</Label>
-                      <Select value={newAssignTo} onValueChange={setNewAssignTo}>
+                      <Select
+                        value={newAssignTo || CHASTER_SELECT_NONE}
+                        onValueChange={setNewAssignTo}
+                      >
                         <SelectTrigger><SelectValue placeholder="Select agent..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value={CHASTER_SELECT_NONE}>
@@ -1862,11 +1890,16 @@ export function HqSupportCasesPage() {
                       </Select>
                     </div>
                   ) : null}
-                  <div className="space-y-1">
-                    <Label>Follow-up / Due Date</Label>
-                    <Input type="datetime-local" value={newFollowUp} onChange={(e) => setNewFollowUp(e.target.value)} />
+                  <div className="space-y-1.5">
+                    <Label>Follow-up / due date</Label>
+                    <Input
+                      type="datetime-local"
+                      value={newFollowUp}
+                      onChange={(e) => setNewFollowUp(e.target.value)}
+                      className="h-10 max-w-sm"
+                    />
                   </div>
-                </div>
+                </section>
               </div>
               <DialogFooter className="shrink-0 gap-2 border-t border-border/60 bg-muted/15 px-6 py-4">
                 <Button
