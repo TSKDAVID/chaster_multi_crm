@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ErrorBoundary } from "react-error-boundary";
 import { useNotify, useTranslate } from "ra-core";
 import { getSupabaseClient } from "@/components/atomic-crm/providers/supabase/supabase";
 import { useAuthUserId } from "@/components/atomic-crm/access/useAuthUserId";
@@ -37,9 +38,33 @@ function formatThreadTime(iso: string) {
   }
 }
 
+function normalizeAttachment(raw: unknown): SupportAttachmentMeta | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const storage_path =
+    typeof o.storage_path === "string" ? o.storage_path.trim() : "";
+  if (!storage_path) return null;
+  return {
+    storage_path,
+    file_name:
+      typeof o.file_name === "string" && o.file_name.trim()
+        ? o.file_name.trim()
+        : "attachment",
+    mime_type:
+      typeof o.mime_type === "string" && o.mime_type.trim()
+        ? o.mime_type.trim()
+        : "application/octet-stream",
+    size: typeof o.size === "number" && Number.isFinite(o.size) ? o.size : 0,
+  };
+}
+
 function parseMessages(rows: unknown[]): SupportCaseMessageRow[] {
   return rows.map((r) => {
     const o = r as Record<string, unknown>;
+    const rawAttachments = Array.isArray(o.attachments) ? o.attachments : [];
+    const attachments = rawAttachments
+      .map(normalizeAttachment)
+      .filter((a): a is SupportAttachmentMeta => a != null);
     return {
       id: String(o.id),
       case_id: String(o.case_id),
@@ -50,10 +75,12 @@ function parseMessages(rows: unknown[]): SupportCaseMessageRow[] {
         o.metadata && typeof o.metadata === "object" && !Array.isArray(o.metadata)
           ? (o.metadata as Record<string, unknown>)
           : {},
-      attachments: Array.isArray(o.attachments)
-        ? (o.attachments as SupportAttachmentMeta[])
-        : [],
+      attachments,
       created_at: String(o.created_at ?? ""),
+      edited_at:
+        typeof o.edited_at === "string" || o.edited_at === null
+          ? (o.edited_at as string | null)
+          : undefined,
     };
   });
 }
@@ -81,7 +108,8 @@ function SupportAttachmentLinks({ items }: { items: SupportAttachmentMeta[] }) {
   return (
     <div className="mt-2 flex flex-col gap-2">
       {(signedQ.data ?? []).map(({ a, url }) => {
-        const isImage = a.mime_type.startsWith("image/");
+        const mime = a.mime_type ?? "application/octet-stream";
+        const isImage = mime.startsWith("image/");
         return (
           <div key={a.storage_path} className="text-xs">
             {isImage && url ? (
@@ -147,7 +175,7 @@ export function SupportCaseThread({
   const [files, setFiles] = useState<File[]>([]);
 
   const caseQ = useQuery({
-    queryKey: ["support-case", caseId],
+    queryKey: ["support-case-thread", caseId],
     enabled: !!caseId,
     queryFn: async () => {
       const { data, error } = await getSupabaseClient()
@@ -269,6 +297,7 @@ export function SupportCaseThread({
         },
         () => {
           void qc.invalidateQueries({ queryKey: ["support-messages", caseId] });
+          void qc.invalidateQueries({ queryKey: ["support-case-thread", caseId] });
           void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
         },
       )
@@ -281,6 +310,7 @@ export function SupportCaseThread({
           filter: `id=eq.${caseId}`,
         },
         () => {
+          void qc.invalidateQueries({ queryKey: ["support-case-thread", caseId] });
           void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
         },
       )
@@ -350,6 +380,7 @@ export function SupportCaseThread({
       if (error) throw error;
     },
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["support-case-thread", caseId] });
       void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
       void qc.invalidateQueries({ queryKey: ["support-messages", caseId] });
       notify(translate("chaster.portal.support.case_reopened"), {
@@ -505,12 +536,26 @@ export function SupportCaseThread({
           "flex max-h-[min(58vh,520px)] flex-col gap-3 overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3 sm:p-4",
         )}
       >
+        <ErrorBoundary
+          fallback={
+            <p className="py-6 text-center text-sm text-destructive">
+              {translate("chaster.hq.support.thread_messages_error")}
+            </p>
+          }
+          onError={(error) => {
+            console.error("SupportCaseThread messages crashed", error);
+          }}
+        >
         {messagesQ.isPending ? (
           <div className="flex flex-col gap-3 py-1">
             <Skeleton className="h-16 w-[min(100%,22rem)] rounded-2xl" />
             <Skeleton className="ml-auto h-14 w-[min(100%,16rem)] rounded-2xl" />
             <Skeleton className="h-12 w-[min(100%,18rem)] rounded-2xl" />
           </div>
+        ) : messagesQ.isError ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            {translate("chaster.hq.support.thread_messages_error")}
+          </p>
         ) : messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             {variant === "hq"
@@ -588,6 +633,7 @@ export function SupportCaseThread({
             ),
           )
         )}
+        </ErrorBoundary>
       </div>
 
       {resolved && !c.satisfaction_submitted_at && variant === "portal" ? (

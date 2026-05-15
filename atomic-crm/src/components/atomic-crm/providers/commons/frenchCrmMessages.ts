@@ -955,6 +955,8 @@ export const frenchCrmMessages = {
           "Aucun message pour l’instant. Vos réponses apparaissent dans le portail client.",
         thread_load_error:
           "Impossible de charger la conversation. Actualisez la page ou réessayez.",
+        thread_messages_error:
+          "Impossible d’afficher les messages. Vous pouvez toujours répondre ci-dessous.",
         assign_self: "M’assigner",
         assign_pick: "Assigner à…",
         status_label: "Statut",

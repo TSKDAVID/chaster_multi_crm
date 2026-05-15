@@ -976,6 +976,8 @@ export const englishCrmMessages = {
           "No messages yet. Replies you send appear in the client’s portal.",
         thread_load_error:
           "The conversation could not load. Refresh the page or try again in a moment.",
+        thread_messages_error:
+          "Messages could not be displayed. You can still reply below.",
         assign_self: "Assign to me",
         assign_pick: "Assign to…",
         status_label: "Status",

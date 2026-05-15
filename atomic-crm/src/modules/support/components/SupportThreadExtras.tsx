@@ -40,8 +40,10 @@ function MinimalSupportComposer({
 }
 
 /** Isolates composer toolbar failures so the case thread still renders. */
+type SafeComposerProps = ComposerProps & { snippets: SupportReplySnippetRow[] };
+
 export class SupportComposerErrorBoundary extends Component<
-  ComposerProps,
+  SafeComposerProps,
   { failed: boolean }
 > {
   state = { failed: false };

@@ -875,11 +875,22 @@ export function HqSupportCaseDetailPage() {
                       <CasePresenceBanner peers={presencePeers} variant="hq" />
                       {caseId ? (
                         <ErrorBoundary
-                          fallback={
-                            <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                              {translate("chaster.hq.support.thread_load_error")}
-                            </p>
-                          }
+                          onError={(error) => {
+                            console.error("SupportCaseThread crashed", error);
+                          }}
+                          fallbackRender={({ resetErrorBoundary }) => (
+                            <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                              <p>{translate("chaster.hq.support.thread_load_error")}</p>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={resetErrorBoundary}
+                              >
+                                {translate("ra.action.refresh")}
+                              </Button>
+                            </div>
+                          )}
                         >
                           <SupportCaseThread caseId={caseId} variant="hq" />
                         </ErrorBoundary>

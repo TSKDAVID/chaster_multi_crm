@@ -23,7 +23,11 @@ export function SnippetPicker({
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
 
-  const filtered = snippets.filter((s) => {
+  const safeSnippets = snippets.filter(
+    (s) => typeof s?.title === "string" && typeof s?.body === "string",
+  );
+
+  const filtered = safeSnippets.filter((s) => {
     const q = filter.trim().toLowerCase();
     if (!q) return true;
     return (
