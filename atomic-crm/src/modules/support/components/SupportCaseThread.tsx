@@ -436,7 +436,8 @@ export function SupportCaseThread({
     return out;
   };
 
-  const c = caseQ.data;
+  const c = cEarly ?? null;
+  const caseLoading = caseRowProp === undefined && caseQ.isPending;
   const resolved = c?.status === "resolved";
 
   const onSend = async () => {
@@ -577,11 +578,11 @@ export function SupportCaseThread({
         )}
       >
         <ErrorBoundary
-          fallback={
+          fallbackRender={() => (
             <p className="py-6 text-center text-sm text-destructive">
               {translate("chaster.hq.support.thread_messages_error")}
             </p>
-          }
+          )}
           onError={(error) => {
             console.error("SupportCaseThread messages crashed", error);
           }}
