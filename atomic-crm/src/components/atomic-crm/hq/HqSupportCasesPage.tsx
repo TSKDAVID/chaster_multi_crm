@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
@@ -140,8 +141,27 @@ function sourceLabelKey(s: SupportCaseSource): string {
 function normalizeCaseRow(r: Record<string, unknown>): CaseWithTenant {
   const row = r as unknown as CaseWithTenant;
   const sr = row.support_requesters;
+  const status = row.status as SupportCaseStatus;
+  const validStatuses: SupportCaseStatus[] = [
+    "open",
+    "in_progress",
+    "pending_client",
+    "resolved",
+  ];
   return {
     ...row,
+    case_number: typeof row.case_number === "string" ? row.case_number : "",
+    subject:
+      typeof row.subject === "string" && row.subject.trim()
+        ? row.subject
+        : "(No subject)",
+    updated_at:
+      typeof row.updated_at === "string"
+        ? row.updated_at
+        : typeof row.created_at === "string"
+          ? row.created_at
+          : new Date().toISOString(),
+    status: validStatuses.includes(status) ? status : "open",
     priority: (row.priority as SupportCasePriority) ?? "medium",
     source: (row.source as SupportCaseSource) ?? "portal",
     support_requesters:
@@ -151,7 +171,8 @@ function normalizeCaseRow(r: Record<string, unknown>): CaseWithTenant {
   };
 }
 
-function previewText(body: string, max = 80): string {
+function previewText(body: string | null | undefined, max = 80): string {
+  if (!body || typeof body !== "string") return "";
   const t = body.replace(/\s+/g, " ").trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max)}…`;
@@ -545,8 +566,8 @@ export function HqSupportCasesPage() {
           .join(" ")
           .toLowerCase();
         return (
-          c.case_number.toLowerCase().includes(q) ||
-          c.subject.toLowerCase().includes(q) ||
+          (c.case_number ?? "").toLowerCase().includes(q) ||
+          (c.subject ?? "").toLowerCase().includes(q) ||
           blob.includes(q)
         );
       });
@@ -910,9 +931,43 @@ export function HqSupportCasesPage() {
     }
   };
 
+  if (casesQ.isError) {
+    return (
+      <ChasterHQGuard>
+        <PermissionGate permission="hq.support.cases.read">
+          <div className="mx-auto max-w-lg space-y-4 p-8 text-center">
+            <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+            <p className="text-sm text-muted-foreground">
+              {casesQ.error instanceof Error
+                ? casesQ.error.message
+                : translate("chaster.hq.support.load_error")}
+            </p>
+            <Button type="button" variant="outline" onClick={() => void casesQ.refetch()}>
+              {translate("ra.action.refresh")}
+            </Button>
+          </div>
+        </PermissionGate>
+      </ChasterHQGuard>
+    );
+  }
+
   return (
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
+        <ErrorBoundary
+          fallbackRender={({ error, resetErrorBoundary }) => (
+            <div className="mx-auto max-w-lg space-y-4 p-8 text-center">
+              <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+              <p className="text-sm font-medium">Support console error</p>
+              <p className="text-xs text-muted-foreground break-words">
+                {error instanceof Error ? error.message : String(error)}
+              </p>
+              <Button type="button" variant="outline" onClick={resetErrorBoundary}>
+                {translate("ra.action.refresh")}
+              </Button>
+            </div>
+          )}
+        >
         <div className="mx-auto flex h-[calc(100dvh-7.5rem)] min-h-[520px] max-w-[1600px] flex-col gap-4 p-4 md:p-6">
           <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
             <div className="space-y-1">
@@ -1140,6 +1195,7 @@ export function HqSupportCasesPage() {
             </section>
           </div>
         </div>
+        </ErrorBoundary>
 
           <Dialog
             open={newOpen}

@@ -5,7 +5,7 @@ import type {
   SupportCaseStatus,
 } from "../supportTypes";
 
-export function supportStatusLabelKey(status: SupportCaseStatus): string {
+export function supportStatusLabelKey(status: SupportCaseStatus | string | null | undefined): string {
   switch (status) {
     case "open":
       return "chaster.portal.support.case_open";
@@ -79,8 +79,11 @@ export function supportPriorityAccent(p: SupportCasePriority): string {
   }
 }
 
-export function formatRelativeTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
+export function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "—";
+  const ms = Date.now() - t;
   const mins = Math.floor(ms / 60000);
   if (mins < 1) return "now";
   if (mins < 60) return `${mins}m`;

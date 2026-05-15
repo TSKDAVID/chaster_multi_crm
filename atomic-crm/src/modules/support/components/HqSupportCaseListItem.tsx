@@ -32,8 +32,10 @@ export function HqSupportCaseListItem({
 }) {
   const translate = useTranslate();
   const company = tenantDisplayName(row) || translate("chaster.hq.support.prospect_no_tenant");
+  const status = row.status ?? "open";
+  const priority = row.priority ?? "medium";
   const slaRisk =
-    row.status !== "resolved" &&
+    status !== "resolved" &&
     (row.sla_response_breached || row.sla_resolution_breached);
 
   return (
@@ -68,14 +70,14 @@ export function HqSupportCaseListItem({
               {row.case_number}
             </span>
             <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-normal">
-              {translate(supportStatusLabelKey(row.status))}
+              {translate(supportStatusLabelKey(status))}
             </Badge>
-            {(row.priority === "high" || row.priority === "urgent") && (
+            {(priority === "high" || priority === "urgent") && (
               <Badge
-                variant={row.priority === "urgent" ? "destructive" : "outline"}
+                variant={priority === "urgent" ? "destructive" : "outline"}
                 className="h-5 px-1.5 text-[10px] font-normal"
               >
-                {translate(supportPriorityLabelKey(row.priority))}
+                {translate(supportPriorityLabelKey(priority))}
               </Badge>
             )}
             {slaRisk ? (

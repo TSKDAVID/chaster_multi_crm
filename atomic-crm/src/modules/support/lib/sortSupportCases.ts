@@ -44,13 +44,15 @@ function tenantLabel(c: SortableCase): string {
 }
 
 function compareCaseNumber(a: string, b: string): number {
-  const na = a.match(/(\d+)\s*$/);
-  const nb = b.match(/(\d+)\s*$/);
+  const sa = a ?? "";
+  const sb = b ?? "";
+  const na = sa.match(/(\d+)\s*$/);
+  const nb = sb.match(/(\d+)\s*$/);
   if (na && nb) {
     const diff = Number(na[1]) - Number(nb[1]);
     if (diff !== 0) return diff;
   }
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  return sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" });
 }
 
 export function compareSupportCases(
@@ -72,10 +74,10 @@ export function compareSupportCases(
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       break;
     case "case_number":
-      cmp = compareCaseNumber(a.case_number, b.case_number);
+      cmp = compareCaseNumber(a.case_number ?? "", b.case_number ?? "");
       break;
     case "subject":
-      cmp = a.subject.localeCompare(b.subject, undefined, {
+      cmp = (a.subject ?? "").localeCompare(b.subject ?? "", undefined, {
         sensitivity: "base",
       });
       break;
