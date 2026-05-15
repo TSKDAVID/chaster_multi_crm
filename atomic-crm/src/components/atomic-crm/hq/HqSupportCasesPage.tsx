@@ -1,28 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
 import {
   AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ArrowUpRight,
-  CheckCircle,
-  ChevronUp,
-  Clock,
+  Headphones,
   Inbox,
-  LayoutGrid,
-  LayoutList,
-  List,
-  MessageSquare,
   Plus,
   Search,
-  TrendingUp,
-  UserCheck,
-  UserPlus,
-  Users,
-  X,
+  Shield,
 } from "lucide-react";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { ChasterHQGuard } from "../access/ChasterHQGuard";
@@ -37,14 +23,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -66,7 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type {
   SupportCaseCategory,
   SupportCasePriority,
@@ -77,7 +54,10 @@ import type {
 } from "@/modules/support/supportTypes";
 import { useSupportStaffUnreadTotal } from "@/modules/support/hooks/useSupportUnread";
 import { useSupportCaseSearch } from "@/modules/support/hooks/useSupportCaseSearch";
-import { SupportQueueInsights } from "@/modules/support/components/SupportQueueInsights";
+import { HqSupportCaseListItem } from "@/modules/support/components/HqSupportCaseListItem";
+import { HqSupportCasePreview } from "@/modules/support/components/HqSupportCasePreview";
+import { HqSupportFilterSheet } from "@/modules/support/components/HqSupportFilterSheet";
+import { HqSupportMetricsStrip } from "@/modules/support/components/HqSupportMetricsStrip";
 import {
   sortSupportCases,
   type SupportCaseSortDir,
@@ -95,7 +75,6 @@ type CaseWithTenant = SupportCaseRow & {
 };
 
 type QuickView = "all" | "my_open" | "unassigned" | "unread";
-type ViewMode = "table" | "card" | "compact";
 
 function statusLabelKey(status: SupportCaseStatus): string {
   switch (status) {
@@ -182,9 +161,12 @@ export function HqSupportCasesPage() {
   const translate = useTranslate();
   const notify = useNotify();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const { can } = useCurrentUserRole();
   const { data: myId } = useAuthUserId();
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const selectedCaseId = searchParams.get("caseId");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [quickView, setQuickView] = useState<QuickView>("all");
@@ -215,9 +197,6 @@ export function HqSupportCasesPage() {
     }
   });
   const [page, setPage] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    try { return (localStorage.getItem("hq-support-view-mode") as ViewMode) || "table"; } catch { return "table"; }
-  });
   const [newOpen, setNewOpen] = useState(false);
   const [newTenantId, setNewTenantId] = useState<string>("");
   const [newSubject, setNewSubject] = useState("");
@@ -261,7 +240,6 @@ export function HqSupportCasesPage() {
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [tenantPickerOpen]);
-  useEffect(() => { try { localStorage.setItem("hq-support-view-mode", viewMode); } catch {} }, [viewMode]);
   useEffect(() => {
     try {
       localStorage.setItem("hq-support-sort-field", sortField);
@@ -617,16 +595,6 @@ export function HqSupportCasesPage() {
     return sorted.slice(start, start + PAGE_SIZE);
   }, [sorted, safePage]);
 
-  const toggleSort = (field: SupportCaseSortField) => {
-    setPage(0);
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir(field === "case_number" || field === "subject" || field === "tenant" ? "asc" : "desc");
-    }
-  };
-
   const sortLabel = (field: SupportCaseSortField) => {
     const key = `chaster.hq.support.sort_${field}` as const;
     return translate(key);
@@ -645,39 +613,6 @@ export function HqSupportCasesPage() {
     setQuickView(view);
     setStatusFilter("all");
     setUnreadOnly(false);
-  };
-
-  const SortableHead = ({
-    field,
-    children,
-  }: {
-    field: SupportCaseSortField;
-    children: React.ReactNode;
-  }) => {
-    const active = sortField === field;
-    return (
-      <TableHead>
-        <button
-          type="button"
-          onClick={() => toggleSort(field)}
-          className={cn(
-            "inline-flex items-center gap-1 font-medium hover:text-foreground",
-            active ? "text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {children}
-          {active ? (
-            sortDir === "asc" ? (
-              <ArrowUp className="h-3.5 w-3.5" />
-            ) : (
-              <ArrowDown className="h-3.5 w-3.5" />
-            )
-          ) : (
-            <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
-          )}
-        </button>
-      </TableHead>
-    );
   };
 
   const createMut = useMutation({
@@ -882,31 +817,6 @@ export function HqSupportCasesPage() {
     return opts;
   }, [assigneeIds, assigneeNamesQ.data, translate]);
 
-  const kpiCard = (
-    label: string,
-    value: number | string,
-    onClick: () => void,
-    active: boolean | undefined,
-    icon: React.ReactNode,
-    borderColor: string,
-  ) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-lg border border-l-4 px-3 py-2 text-left transition-colors hover:bg-muted/60",
-        borderColor,
-        active && "border-primary bg-primary/5",
-      )}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-muted-foreground">{icon}</span>
-        <div className="text-2xl font-semibold tabular-nums transition-all duration-300">{value}</div>
-      </div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-    </button>
-  );
-
   const filtersDefault =
     quickView === "all" &&
     statusFilter === "all" &&
@@ -917,743 +827,319 @@ export function HqSupportCasesPage() {
     !slaAtRiskOnly &&
     !search.trim();
 
+  const activeFilterCount = [
+    statusFilter !== "all",
+    tenantFilter !== "all",
+    assigneeFilter !== "all",
+    priorityFilter !== "all",
+    unreadOnly,
+    slaAtRiskOnly,
+  ].filter(Boolean).length;
+
+  const metricsActiveKey = slaAtRiskOnly
+    ? "sla"
+    : quickView === "unassigned"
+      ? "unassigned"
+      : quickView === "unread"
+        ? "unread"
+        : statusFilter === "open" && quickView === "all"
+          ? "open"
+          : null;
+
+  const tenantFilterOptions = useMemo(
+    () => (dirQ.data ?? []).map((t) => ({ id: t.id, label: t.company_name })),
+    [dirQ.data],
+  );
+
+  const selectCase = (id: string) => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setSearchParams((prev) => {
+        const n = new URLSearchParams(prev);
+        n.set("caseId", id);
+        return n;
+      });
+    } else {
+      navigate(`/hq/support/cases/${id}`);
+    }
+  };
+
+  const clearCaseSelection = () => {
+    setSearchParams((prev) => {
+      const n = new URLSearchParams(prev);
+      n.delete("caseId");
+      return n;
+    });
+  };
+
+  const clearAllFilters = () => {
+    setQuickView("all");
+    setStatusFilter("all");
+    setUnreadOnly(false);
+    setTenantFilter("all");
+    setAssigneeFilter("all");
+    setPriorityFilter("all");
+    setSlaAtRiskOnly(false);
+    setSearch("");
+    setPage(0);
+  };
+
+  const onMetricSelect = (
+    key: "open" | "unassigned" | "unread" | "sla" | "new7d" | null,
+  ) => {
+    setPage(0);
+    if (!key) {
+      clearAllFilters();
+      return;
+    }
+    if (key === "sla") {
+      applyInsightsFilter("sla");
+      return;
+    }
+    setSlaAtRiskOnly(false);
+    setStatusFilter("all");
+    setUnreadOnly(false);
+    if (key === "open") {
+      setQuickView("all");
+      setStatusFilter("open");
+    } else if (key === "unassigned") {
+      setQuickView("unassigned");
+    } else if (key === "unread") {
+      setQuickView("unread");
+    } else if (key === "new7d") {
+      setQuickView("all");
+    }
+  };
+
   return (
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
-        <div className="max-w-screen-xl mx-auto p-6 space-y-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold flex items-center gap-2">
+        <div className="mx-auto flex h-[calc(100dvh-7.5rem)] min-h-[520px] max-w-[1600px] flex-col gap-4 p-4 md:p-6">
+          <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                <Headphones className="h-7 w-7 text-primary" />
                 {translate("chaster.hq.support.cases_title")}
                 <UnreadBadge count={staffUnread.data ?? 0} />
               </h1>
-              <p className="text-muted-foreground mt-1">
-                {translate("chaster.hq.support.cases_subtitle")}
+              <p className="max-w-xl text-sm text-muted-foreground">
+                {translate("chaster.hq.support.console_subtitle")}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {can("hq.support.cases.manage") ? (
-                <Button type="button" size="sm" onClick={() => setNewOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1" />
+                <Button type="button" size="sm" className="gap-1.5" onClick={() => setNewOpen(true)}>
+                  <Plus className="h-4 w-4" />
                   {translate("chaster.hq.support.new_case")}
                 </Button>
               ) : null}
               {can("hq.support.faqs.manage") ? (
                 <Button asChild variant="outline" size="sm">
-                  <Link to="/hq/support/faqs">
-                    {translate("chaster.hq.support.faqs_title")}
-                  </Link>
+                  <Link to="/hq/support/faqs">{translate("chaster.hq.support.faqs_title")}</Link>
                 </Button>
               ) : null}
+              <Button asChild variant="outline" size="sm" className="gap-1.5">
+                <Link to="/hq/support/sla-policies">
+                  <Shield className="h-3.5 w-3.5" />
+                  SLA
+                </Link>
+              </Button>
             </div>
-          </div>
+          </header>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
-            {kpiCard(
-              translate("chaster.hq.support.kpi_open"),
-              kpis.open,
-              () => {
-                setQuickView("all");
-                setStatusFilter("open");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              statusFilter === "open" && quickView === "all",
-              <Inbox className="h-4 w-4" />,
-              "border-l-blue-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_in_progress"),
-              kpis.inProgress,
-              () => {
-                setQuickView("all");
-                setStatusFilter("in_progress");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              statusFilter === "in_progress" && quickView === "all",
-              <Clock className="h-4 w-4" />,
-              "border-l-yellow-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_pending_client"),
-              kpis.pendingClient,
-              () => {
-                setQuickView("all");
-                setStatusFilter("pending_client");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              statusFilter === "pending_client" && quickView === "all",
-              <UserCheck className="h-4 w-4" />,
-              "border-l-orange-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_resolved"),
-              kpis.resolved,
-              () => {
-                setQuickView("all");
-                setStatusFilter("resolved");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              statusFilter === "resolved" && quickView === "all",
-              <CheckCircle className="h-4 w-4" />,
-              "border-l-green-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_unassigned"),
-              kpis.unassigned,
-              () => {
-                setQuickView("unassigned");
-                setStatusFilter("all");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              quickView === "unassigned",
-              <Users className="h-4 w-4" />,
-              "border-l-slate-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_unread_client"),
-              kpis.unreadClient,
-              () => {
-                setQuickView("unread");
-                setStatusFilter("all");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              quickView === "unread",
-              <MessageSquare className="h-4 w-4" />,
-              "border-l-indigo-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_new_7d"),
-              kpis.new7d,
-              () => {
-                setQuickView("all");
-                setStatusFilter("all");
-                setUnreadOnly(false);
-                setPage(0);
-              },
-              false,
-              <TrendingUp className="h-4 w-4" />,
-              "border-l-cyan-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_sla_breached"),
-              kpis.slaBreached,
-              () => applyInsightsFilter("sla"),
-              slaAtRiskOnly,
-              <AlertTriangle className="h-4 w-4" />,
-              "border-l-red-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_escalated"),
-              kpis.escalated,
-              () => {
-                setQuickView("all");
-                setStatusFilter("all");
-                setUnreadOnly(false);
-                setSlaAtRiskOnly(false);
-                setPage(0);
-              },
-              false,
-              <ArrowUpRight className="h-4 w-4" />,
-              "border-l-purple-500",
-            )}
-            {kpiCard(
-              translate("chaster.hq.support.kpi_avg_first_response"),
-              kpis.avgFirstResponse,
-              () => {},
-              false,
-              <Clock className="h-4 w-4" />,
-              "border-l-teal-500",
-            )}
-          </div>
+          <HqSupportMetricsStrip
+            metrics={{
+              open: kpis.open + kpis.inProgress + kpis.pendingClient,
+              unassigned: kpis.unassigned,
+              unread: kpis.unreadClient,
+              slaBreached: kpis.slaBreached,
+              new7d: kpis.new7d,
+            }}
+            activeKey={metricsActiveKey}
+            onSelect={onMetricSelect}
+          />
 
-          <div className="flex flex-wrap items-center gap-4">
-            <ToggleGroup
-              type="single"
-              value={quickView}
-              onValueChange={(v) => {
-                if (!v) return;
-                setQuickView(v as QuickView);
-                setPage(0);
-              }}
-              className="justify-start flex-wrap"
-            >
-              <ToggleGroupItem value="all" size="sm">
-                {translate("chaster.hq.support.quick_all")}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="my_open" size="sm">
-                {translate("chaster.hq.support.quick_my_open")}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="unassigned" size="sm">
-                {translate("chaster.hq.support.quick_unassigned")}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="unread" size="sm">
-                {translate("chaster.hq.support.quick_unread")}
-              </ToggleGroupItem>
-            </ToggleGroup>
-
-            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => { if (v) setViewMode(v as ViewMode); }} className="ml-auto">
-              <ToggleGroupItem value="table" size="sm" title="Table view"><LayoutList className="h-4 w-4" /></ToggleGroupItem>
-              <ToggleGroupItem value="card" size="sm" title="Card view"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-              <ToggleGroupItem value="compact" size="sm" title="Compact view"><List className="h-4 w-4" /></ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {translate("chaster.hq.support.console_queue_title")}
-              </CardTitle>
-              <CardDescription>
-                {translate("chaster.hq.support.console_queue_hint")}
-              </CardDescription>
-              <div className="xl:hidden pt-3">
-                <SupportQueueInsights
-                  cases={rows}
-                  unreadIds={unreadIds}
-                  myId={myId ?? undefined}
-                  onFilter={applyInsightsFilter}
-                />
-              </div>
-              <div className="flex flex-col gap-3 pt-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm lg:flex-row">
+            <section className="flex w-full min-h-0 flex-col border-b border-border/80 lg:w-[380px] lg:max-w-[42%] lg:shrink-0 lg:border-b-0 lg:border-r">
+              <div className="shrink-0 space-y-3 border-b border-border/80 p-3">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    className="pl-8"
+                    className="h-9 pl-8"
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
                       setPage(0);
                     }}
-                    placeholder={translate(
-                      "chaster.hq.support.search_placeholder",
-                    )}
+                    placeholder={translate("chaster.hq.support.search_placeholder")}
                   />
                 </div>
-                <div className="flex flex-wrap gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      {translate("chaster.hq.support.filter_status")}
-                    </Label>
-                    <Select
-                      value={statusFilter}
-                      onValueChange={(v) => {
-                        setStatusFilter(v);
-                        setPage(0);
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          {translate("chaster.hq.support.filter_all")}
-                        </SelectItem>
-                        <SelectItem value="open">
-                          {translate("chaster.portal.support.case_open")}
-                        </SelectItem>
-                        <SelectItem value="in_progress">
-                          {translate(
-                            "chaster.portal.support.case_in_progress",
-                          )}
-                        </SelectItem>
-                        <SelectItem value="pending_client">
-                          {translate(
-                            "chaster.portal.support.case_pending_client",
-                          )}
-                        </SelectItem>
-                        <SelectItem value="resolved">
-                          {translate("chaster.portal.support.case_resolved")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      {translate("chaster.hq.support.filter_unread")}
-                    </Label>
-                    <Select
-                      value={unreadOnly ? "yes" : "no"}
-                      onValueChange={(v) => {
-                        setUnreadOnly(v === "yes");
-                        setPage(0);
-                      }}
-                    >
-                      <SelectTrigger className="w-[160px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="no">
-                          {translate("chaster.hq.support.filter_all")}
-                        </SelectItem>
-                        <SelectItem value="yes">
-                          {translate("chaster.hq.support.filter_unread")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      {translate("chaster.hq.support.filter_tenant")}
-                    </Label>
-                    <Select
-                      value={tenantFilter}
-                      onValueChange={(v) => {
-                        setTenantFilter(v);
-                        setPage(0);
-                      }}
-                    >
-                      <SelectTrigger className="w-[220px]">
-                        <SelectValue
-                          placeholder={translate(
-                            "chaster.hq.support.filter_tenant_all",
-                          )}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          {translate("chaster.hq.support.filter_tenant_all")}
-                        </SelectItem>
-                        <SelectItem value="__prospect__">
-                          {translate("chaster.hq.support.filter_tenant_prospects")}
-                        </SelectItem>
-                        {(dirQ.data ?? []).map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.company_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      {translate("chaster.hq.support.filter_assignee")}
-                    </Label>
-                    <Select
-                      value={assigneeFilter}
-                      onValueChange={(v) => {
-                        setAssigneeFilter(v);
-                        setPage(0);
-                      }}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assigneeOptions.map((o) => (
-                          <SelectItem key={o.id} value={o.id}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      {translate("chaster.hq.support.filter_priority")}
-                    </Label>
-                    <Select
-                      value={priorityFilter}
-                      onValueChange={(v) => {
-                        setPriorityFilter(v);
-                        setPage(0);
-                      }}
-                    >
-                      <SelectTrigger className="w-[160px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          {translate("chaster.hq.support.filter_all")}
-                        </SelectItem>
-                        <SelectItem value="low">
-                          {translate("chaster.hq.support.priority_low")}
-                        </SelectItem>
-                        <SelectItem value="medium">
-                          {translate("chaster.hq.support.priority_medium")}
-                        </SelectItem>
-                        <SelectItem value="high">
-                          {translate("chaster.hq.support.priority_high")}
-                        </SelectItem>
-                        <SelectItem value="urgent">
-                          {translate("chaster.hq.support.priority_urgent")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      {translate("chaster.hq.support.sort_label")}
-                    </Label>
-                    <Select
-                      value={`${sortField}:${sortDir}`}
-                      onValueChange={(v) => {
-                        const [field, dir] = v.split(":") as [
-                          SupportCaseSortField,
-                          SupportCaseSortDir,
-                        ];
-                        setSortField(field);
-                        setSortDir(dir);
-                        setPage(0);
-                      }}
-                    >
-                      <SelectTrigger className="w-[220px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(
-                          [
-                            "updated_at",
-                            "created_at",
-                            "case_number",
-                            "subject",
-                            "tenant",
-                            "priority",
-                            "status",
-                            "assigned",
-                          ] as SupportCaseSortField[]
-                        ).flatMap((field) =>
-                          (["asc", "desc"] as SupportCaseSortDir[]).map((dir) => (
-                            <SelectItem key={`${field}:${dir}`} value={`${field}:${dir}`}>
-                              {sortLabel(field)} (
-                              {dir === "asc"
-                                ? translate("chaster.hq.support.sort_asc_short")
-                                : translate("chaster.hq.support.sort_desc_short")}
-                              )
-                            </SelectItem>
-                          )),
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {!filtersDefault ? (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  {(
+                    [
+                      ["all", "chaster.hq.support.quick_all"],
+                      ["my_open", "chaster.hq.support.quick_my_open"],
+                      ["unassigned", "chaster.hq.support.quick_unassigned"],
+                      ["unread", "chaster.hq.support.quick_unread"],
+                    ] as const
+                  ).map(([view, labelKey]) => (
                     <Button
+                      key={view}
                       type="button"
-                      variant="ghost"
                       size="sm"
+                      variant={quickView === view ? "default" : "outline"}
                       className="h-7 text-xs"
                       onClick={() => {
-                        setQuickView("all");
-                        setStatusFilter("all");
-                        setUnreadOnly(false);
-                        setTenantFilter("all");
-                        setAssigneeFilter("all");
-                        setPriorityFilter("all");
+                        setQuickView(view);
                         setSlaAtRiskOnly(false);
-                        setSearch("");
                         setPage(0);
                       }}
                     >
-                      <X className="h-3 w-3 mr-1" />
-                      {translate("chaster.hq.support.clear_filters")}
+                      {translate(labelKey)}
                     </Button>
-                  </div>
-                ) : null}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {casesQ.isPending ? (
-                <Skeleton className="h-48 w-full" />
-              ) : filtered.length === 0 ? (
-                <div className="text-sm text-muted-foreground space-y-3 py-6">
-                  <p>
-                    {rows.length === 0
-                      ? translate("chaster.hq.support.empty_no_cases")
-                      : translate("chaster.hq.support.empty")}
-                  </p>
-                  {rows.length === 0 && filtersDefault ? (
-                    <p>{translate("chaster.hq.support.empty_create_hint")}</p>
-                  ) : null}
-                  {rows.length === 0 &&
-                  filtersDefault &&
-                  can("hq.support.cases.manage") ? (
-                    <Button type="button" onClick={() => setNewOpen(true)}>
-                      {translate("chaster.hq.support.empty_create_cta")}
-                    </Button>
-                  ) : null}
+                  ))}
+                  <HqSupportFilterSheet
+                    open={filterSheetOpen}
+                    onOpenChange={setFilterSheetOpen}
+                    statusFilter={statusFilter}
+                    onStatusFilter={(v) => {
+                      setStatusFilter(v);
+                      setPage(0);
+                    }}
+                    tenantFilter={tenantFilter}
+                    onTenantFilter={(v) => {
+                      setTenantFilter(v);
+                      setPage(0);
+                    }}
+                    assigneeFilter={assigneeFilter}
+                    onAssigneeFilter={(v) => {
+                      setAssigneeFilter(v);
+                      setPage(0);
+                    }}
+                    priorityFilter={priorityFilter}
+                    onPriorityFilter={(v) => {
+                      setPriorityFilter(v);
+                      setPage(0);
+                    }}
+                    sortField={sortField}
+                    sortDir={sortDir}
+                    onSortChange={(field, dir) => {
+                      setSortField(field);
+                      setSortDir(dir);
+                      setPage(0);
+                    }}
+                    assigneeOptions={assigneeOptions}
+                    tenantOptions={tenantFilterOptions}
+                    sortLabel={sortLabel}
+                    activeFilterCount={activeFilterCount}
+                    onClear={clearAllFilters}
+                  />
                 </div>
-              ) : (
-                <>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-                    <span>
-                      {translate("chaster.hq.support.queue_results", {
-                        shown: paged.length,
-                        total: sorted.length,
-                        all: rows.length,
-                      })}
-                    </span>
-                    <span className="text-xs">
-                      {sortLabel(sortField)} ({sortDir === "asc" ? "↑" : "↓"})
-                    </span>
-                  </div>
-                  {viewMode === "table" ? (
-                  <div className="rounded-md border overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <SortableHead field="case_number">
-                            {translate("chaster.hq.support.col_case_number")}
-                          </SortableHead>
-                          <SortableHead field="subject">
-                            {translate("chaster.hq.support.col_case")}
-                          </SortableHead>
-                          <SortableHead field="tenant">
-                            {translate("chaster.hq.support.col_tenant")}
-                          </SortableHead>
-                          <SortableHead field="status">
-                            {translate("chaster.hq.support.col_status")}
-                          </SortableHead>
-                          <SortableHead field="priority">
-                            {translate("chaster.hq.support.col_priority")}
-                          </SortableHead>
-                          <TableHead>
-                            {translate("chaster.hq.support.col_category")}
-                          </TableHead>
-                          <SortableHead field="assigned">
-                            {translate("chaster.hq.support.col_assigned")}
-                          </SortableHead>
-                          <TableHead>
-                            {translate("chaster.hq.support.col_preview")}
-                          </TableHead>
-                          <SortableHead field="updated_at">
-                            {translate("chaster.hq.support.col_updated")}
-                          </SortableHead>
-                          <SortableHead field="created_at">
-                            {translate("chaster.hq.support.col_created")}
-                          </SortableHead>
-                          <TableHead>SLA</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paged.map((c) => {
-                          const lm = lastMessagesQ.data?.[c.id];
-                          return (
-                            <TableRow key={c.id}>
-                              <TableCell className="font-mono text-xs whitespace-nowrap">
-                                <Link
-                                  to={`/hq/support/cases/${c.id}`}
-                                  className="text-primary hover:underline"
-                                >
-                                  {c.case_number}
-                                </Link>
-                              </TableCell>
-                              <TableCell>
-                                <Link
-                                  to={`/hq/support/cases/${c.id}`}
-                                  className={cn(
-                                    "font-medium text-primary hover:underline inline-flex items-center gap-2",
-                                  )}
-                                >
-                                  {c.subject}
-                                  {unreadIds.has(c.id) ? (
-                                    <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                                  ) : null}
-                                </Link>
-                              </TableCell>
-                              <TableCell className="max-w-[140px] truncate">
-                                {c.tenants?.company_name ??
-                                  c.support_requesters?.organization_name ??
-                                  "—"}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col gap-1">
-                                  <Badge variant="secondary">
-                                    {translate(statusLabelKey(c.status))}
-                                  </Badge>
-                                  {c.source === "email" ? (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
-                                      email
-                                    </Badge>
-                                  ) : null}
-                                  {c.possible_duplicate_of && !c.merged_into_case_id ? (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-orange-400 text-orange-600">
-                                      Possible Duplicate
-                                    </Badge>
-                                  ) : null}
-                                  {c.merged_into_case_id ? (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                                      Merged
-                                    </Badge>
-                                  ) : null}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">
-                                  {translate(priorityLabelKey(c.priority))}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {translate(categoryLabelKey(c.category))}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {c.assigned_to
-                                  ? assigneeNamesQ.data?.[c.assigned_to] ??
-                                    c.assigned_to.slice(0, 8)
-                                  : translate("chaster.hq.support.unassigned")}
-                              </TableCell>
-                              <TableCell className="max-w-[200px] text-xs text-muted-foreground truncate">
-                                {lm?.body
-                                  ? previewText(lm.body)
-                                  : "—"}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                                {new Date(c.updated_at).toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                                {new Date(c.created_at).toLocaleString()}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col gap-1">
-                                  {c.sla_response_breached ? (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                      Response Breached
-                                    </Badge>
-                                  ) : c.sla_resolution_breached ? (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                      Resolution Breached
-                                    </Badge>
-                                  ) : c.first_response_due_at && c.status !== "resolved" ? (
-                                    (() => {
-                                      const due = new Date(c.first_response_due_at).getTime();
-                                      const elapsed = (due - Date.now()) / (due - new Date(c.created_at).getTime());
-                                      return elapsed < 0.25 ? (
-                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-yellow-500 text-yellow-600">
-                                          SLA At Risk
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500 text-green-600">
-                                          On Track
-                                        </Badge>
-                                      );
-                                    })()
-                                  ) : null}
-                                  {(c.escalation_level ?? 0) > 0 ? (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                      Escalation L{c.escalation_level}
-                                    </Badge>
-                                  ) : null}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  ) : viewMode === "card" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {paged.map((c) => {
-                      const lm = lastMessagesQ.data?.[c.id];
-                      const priorityColor = c.priority === "urgent" ? "bg-red-500" : c.priority === "high" ? "bg-orange-500" : c.priority === "medium" ? "bg-blue-500" : "bg-gray-400";
-                      return (
-                        <Link key={c.id} to={`/hq/support/cases/${c.id}`} className={cn("block rounded-lg border transition-all hover:shadow-md hover:border-primary/30", unreadIds.has(c.id) && "border-l-4 border-l-primary")}>
-                          <div className={cn("h-1 rounded-t-lg", priorityColor)} />
-                          <div className="p-4 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">{c.subject}</p>
-                                <p className="text-xs text-muted-foreground font-mono">{c.case_number}</p>
-                              </div>
-                              {unreadIds.has(c.id) ? <span className="h-2.5 w-2.5 rounded-full bg-primary shrink-0 mt-1" /> : null}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">{c.tenants?.company_name ?? c.support_requesters?.organization_name ?? "—"}</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              <Badge variant="secondary" className="text-[10px]">{translate(statusLabelKey(c.status))}</Badge>
-                              <Badge variant="outline" className="text-[10px]">{translate(priorityLabelKey(c.priority))}</Badge>
-                              {(c.escalation_level ?? 0) > 0 ? <Badge variant="destructive" className="text-[10px]">L{c.escalation_level}</Badge> : null}
-                            </div>
-                            {lm?.body ? <p className="text-xs text-muted-foreground line-clamp-2">{lm.body.replace(/\s+/g, " ").trim()}</p> : null}
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
-                              <span>{c.assigned_to ? (assigneeNamesQ.data?.[c.assigned_to] ?? c.assigned_to.slice(0, 8)) : translate("chaster.hq.support.unassigned")}</span>
-                              <span>{new Date(c.updated_at).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                  ) : (
-                  <div className="space-y-1">
-                    {paged.map((c) => {
-                      const lm = lastMessagesQ.data?.[c.id];
-                      return (
-                        <Link key={c.id} to={`/hq/support/cases/${c.id}`} className={cn("flex items-center gap-3 rounded-md border px-3 py-2 transition-colors hover:bg-muted/50", unreadIds.has(c.id) && "border-l-4 border-l-primary bg-primary/5")}>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm truncate">{c.subject}</span>
-                              <Badge variant="secondary" className="text-[10px] shrink-0">{translate(statusLabelKey(c.status))}</Badge>
-                              <Badge variant="outline" className="text-[10px] shrink-0">{translate(priorityLabelKey(c.priority))}</Badge>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                              <span className="font-mono">{c.case_number}</span>
-                              <span>·</span>
-                              <span className="truncate">{c.tenants?.company_name ?? "—"}</span>
-                              <span>·</span>
-                              <span>{translate(categoryLabelKey(c.category))}</span>
-                              <span>·</span>
-                              <span>{c.assigned_to ? (assigneeNamesQ.data?.[c.assigned_to] ?? c.assigned_to.slice(0, 8)) : translate("chaster.hq.support.unassigned")}</span>
-                            </div>
-                          </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">{new Date(c.updated_at).toLocaleDateString()}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                  )}
-                  {pageCount > 1 ? (
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                      <span className="text-muted-foreground">
-                        {translate("chaster.hq.support.pagination_page", {
-                          page: safePage + 1,
-                          total: pageCount,
-                        })}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={safePage <= 0}
-                          onClick={() => setPage((p) => Math.max(0, p - 1))}
-                        >
-                          {translate("chaster.hq.support.pagination_prev")}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={safePage >= pageCount - 1}
-                          onClick={() =>
-                            setPage((p) => Math.min(pageCount - 1, p + 1))
-                          }
-                        >
-                          {translate("chaster.hq.support.pagination_next")}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                <p className="text-[11px] text-muted-foreground">
+                  {translate("chaster.hq.support.queue_results", {
+                    shown: paged.length,
+                    total: sorted.length,
+                    all: rows.length,
+                  })}
+                </p>
+              </div>
 
-          <aside className="hidden xl:block space-y-4 xl:sticky xl:top-6 xl:self-start">
-            <SupportQueueInsights
-              cases={rows}
-              unreadIds={unreadIds}
-              myId={myId ?? undefined}
-              onFilter={applyInsightsFilter}
-            />
-          </aside>
+              <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                {casesQ.isPending ? (
+                  <div className="space-y-2 p-2">
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                  </div>
+                ) : paged.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+                    <Inbox className="h-10 w-10 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">
+                      {rows.length === 0
+                        ? translate("chaster.hq.support.empty_no_cases")
+                        : translate("chaster.hq.support.empty")}
+                    </p>
+                    {rows.length === 0 && filtersDefault && can("hq.support.cases.manage") ? (
+                      <Button type="button" size="sm" onClick={() => setNewOpen(true)}>
+                        {translate("chaster.hq.support.empty_create_cta")}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {paged.map((c) => {
+                      const lm = lastMessagesQ.data?.[c.id];
+                      return (
+                        <li key={c.id}>
+                          <HqSupportCaseListItem
+                            row={c}
+                            active={selectedCaseId === c.id}
+                            unread={unreadIds.has(c.id)}
+                            assigneeName={
+                              c.assigned_to
+                                ? assigneeNamesQ.data?.[c.assigned_to]
+                                : undefined
+                            }
+                            preview={lm?.body ? previewText(lm.body) : undefined}
+                            onSelect={() => selectCase(c.id)}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+
+              {pageCount > 1 ? (
+                <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/80 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {translate("chaster.hq.support.pagination_page", {
+                      page: safePage + 1,
+                      total: pageCount,
+                    })}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      disabled={safePage <= 0}
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    >
+                      {translate("chaster.hq.support.pagination_prev")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      disabled={safePage >= pageCount - 1}
+                      onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    >
+                      {translate("chaster.hq.support.pagination_next")}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="hidden min-h-0 min-w-0 flex-1 flex-col lg:flex">
+              {selectedCaseId ? (
+                <HqSupportCasePreview caseId={selectedCaseId} onClose={clearCaseSelection} />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+                  <Inbox className="h-12 w-12 text-muted-foreground/40" />
+                  <p className="text-sm font-medium text-foreground">
+                    {translate("chaster.hq.support.inbox_select_case")}
+                  </p>
+                  <p className="max-w-xs text-xs text-muted-foreground">
+                    {translate("chaster.hq.support.inbox_select_case_hint")}
+                  </p>
+                </div>
+              )}
+            </section>
           </div>
+        </div>
 
           <Dialog
             open={newOpen}
@@ -2176,7 +1662,6 @@ export function HqSupportCasesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
       </PermissionGate>
     </ChasterHQGuard>
   );

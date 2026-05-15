@@ -933,6 +933,15 @@ export const frenchCrmMessages = {
       support: {
         cases_title: "Tickets support",
         cases_subtitle: "Demandes des tenants et fils visibles côté client.",
+        console_subtitle:
+          "Traitez les dossiers au même endroit—recherche, assignation et réponses sans perdre le contexte.",
+        open_full_case: "Ouvrir le dossier complet",
+        filters: "Filtres",
+        filters_title: "Affiner la file",
+        filters_desc: "Filtrer par statut, entreprise, assigné, priorité et tri.",
+        inbox_select_case: "Sélectionnez un dossier",
+        inbox_select_case_hint:
+          "Choisissez une conversation pour prévisualiser et répondre, ou ouvrez le dossier complet pour les notes et propriétés.",
         case_detail: "Détail du ticket",
         back_list: "Tous les tickets",
         col_case: "Ticket",

@@ -8,14 +8,11 @@ import {
   FunctionsHttpError,
 } from "@supabase/supabase-js";
 import {
-  ArrowLeft,
   CalendarClock,
   CheckCircle2,
-  ExternalLink,
   Link2,
   RotateCcw,
   Tag,
-  UserCircle,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,19 +51,11 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { SupportCaseThread } from "@/modules/support/components/SupportCaseThread";
 import { CloseCaseDialog } from "@/modules/support/components/CloseCaseDialog";
 import { CasePresenceBanner } from "@/modules/support/components/CasePresenceBanner";
 import { CsatPrompt } from "@/modules/support/components/CsatPrompt";
-import { SupportStatusPill } from "@/modules/support/components/SupportStatusPill";
+import { HqSupportCaseWorkspace } from "@/modules/support/components/HqSupportCaseWorkspace";
 import { useCasePresence } from "@/modules/support/hooks/useCasePresence";
 import { safeSelectValue } from "@/modules/support/lib/selectValue";
 import { useChasterAccess } from "../access/chasterAccessContext";
@@ -782,171 +771,114 @@ export function HqSupportCaseDetailPage() {
   return (
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
-        <div className="mx-auto max-w-7xl space-y-8 p-4 pb-12 sm:p-6 lg:p-8">
-          <Button variant="ghost" size="sm" asChild className="-ml-2 gap-1">
-            <Link to="/hq/support/cases">
-              <ArrowLeft className="h-4 w-4" />
-              {translate("chaster.hq.support.back_list")}
-            </Link>
-          </Button>
-
+        <div className="p-4 md:p-6">
           {caseQ.isPending || !c ? (
-            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-[min(520px,70vh)] w-full rounded-xl" />
           ) : (
             <>
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>
-                      <Link to="/hq/support/cases">
-                        {translate("chaster.hq.support.detail_breadcrumb_list")}
-                      </Link>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="font-mono text-xs">
-                      {c.case_number}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="max-w-[min(100%,320px)] truncate">
-                      {c.subject}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-
-              {c.possible_duplicate_of && !c.merged_into_case_id ? (
-                <div className="rounded-lg border border-yellow-400/50 bg-yellow-50 dark:bg-yellow-950/20 p-4 flex items-center justify-between gap-4">
-                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                    This case may be a duplicate of another case
-                    {c.duplicate_confidence
-                      ? ` (${Math.round(c.duplicate_confidence * 100)}% confidence)`
-                      : ""}
-                    .
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          const { error } = await getSupabaseClient().rpc(
-                            "merge_support_cases",
-                            {
-                              p_source_case_id: caseId!,
-                              p_target_case_id: c.possible_duplicate_of!,
-                            },
-                          );
-                          if (error) throw error;
-                          notify("Case merged successfully", { type: "success" });
-                          void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
-                        } catch (e: unknown) {
-                          notify((e as Error).message, { type: "error" });
-                        }
-                      }}
-                    >
-                      Merge into original
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        const { error } = await getSupabaseClient()
-                          .from("support_cases")
-                          .update({ possible_duplicate_of: null, duplicate_confidence: null })
-                          .eq("id", caseId!);
-                        if (error) notify(error.message, { type: "error" });
-                        else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
-                      }}
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              {c.merged_into_case_id ? (
-                <div className="rounded-lg border border-gray-300/50 bg-gray-50 dark:bg-gray-950/20 p-4 flex items-center justify-between gap-4">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    This case was merged into another case
-                    {c.merged_at
-                      ? ` on ${new Date(c.merged_at).toLocaleDateString()}`
-                      : ""}
-                    .
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        const { error } = await getSupabaseClient().rpc(
-                          "unmerge_support_case",
-                          { p_source_case_id: caseId! },
-                        );
-                        if (error) throw error;
-                        notify("Case unmerged successfully", { type: "success" });
-                        void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
-                      } catch (e: unknown) {
-                        notify((e as Error).message, { type: "error" });
-                      }
-                    }}
-                  >
-                    Undo merge
-                  </Button>
-                </div>
-              ) : null}
-
-              <div className="rounded-xl border border-border/80 bg-gradient-to-r from-card via-card to-muted/20 p-5 shadow-sm sm:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-                  <div className="min-w-0 space-y-3">
-                    {c.follow_up_at && new Date(c.follow_up_at).getTime() < Date.now() && c.status !== "resolved" ? (
+              <HqSupportCaseWorkspace
+                caseRow={c}
+                assigneeLabel={
+                  c.assigned_to
+                    ? assigneeQ.data ?? translate("chaster.hq.support.assignee_loading")
+                    : translate("chaster.hq.support.unassigned")
+                }
+                isProspect={isProspectCase}
+                banners={
+                  <>
+                    {c.possible_duplicate_of && !c.merged_into_case_id ? (
+                      <div className="rounded-lg border border-yellow-400/50 bg-yellow-50 p-3 dark:bg-yellow-950/20 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                          This case may be a duplicate of another case
+                          {c.duplicate_confidence
+                            ? ` (${Math.round(c.duplicate_confidence * 100)}% confidence)`
+                            : ""}
+                          .
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const { error } = await getSupabaseClient().rpc(
+                                  "merge_support_cases",
+                                  {
+                                    p_source_case_id: caseId!,
+                                    p_target_case_id: c.possible_duplicate_of!,
+                                  },
+                                );
+                                if (error) throw error;
+                                notify("Case merged successfully", { type: "success" });
+                                void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                              } catch (e: unknown) {
+                                notify((e as Error).message, { type: "error" });
+                              }
+                            }}
+                          >
+                            Merge into original
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              const { error } = await getSupabaseClient()
+                                .from("support_cases")
+                                .update({ possible_duplicate_of: null, duplicate_confidence: null })
+                                .eq("id", caseId!);
+                              if (error) notify(error.message, { type: "error" });
+                              else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                            }}
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {c.merged_into_case_id ? (
+                      <div className="rounded-lg border border-gray-300/50 bg-gray-50 p-3 dark:bg-gray-950/20 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          This case was merged into another case
+                          {c.merged_at
+                            ? ` on ${new Date(c.merged_at).toLocaleDateString()}`
+                            : ""}
+                          .
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const { error } = await getSupabaseClient().rpc(
+                                "unmerge_support_case",
+                                { p_source_case_id: caseId! },
+                              );
+                              if (error) throw error;
+                              notify("Case unmerged successfully", { type: "success" });
+                              void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+                            } catch (e: unknown) {
+                              notify((e as Error).message, { type: "error" });
+                            }
+                          }}
+                        >
+                          Undo merge
+                        </Button>
+                      </div>
+                    ) : null}
+                    {c.follow_up_at &&
+                    new Date(c.follow_up_at).getTime() < Date.now() &&
+                    c.status !== "resolved" ? (
                       <div className="inline-flex items-center gap-1.5 rounded-full border border-red-500/50 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300">
                         <CalendarClock className="h-3 w-3" />
                         Follow-up overdue
                       </div>
                     ) : null}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                      {c.source === "email" && c.source_email ? (
-                        <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {c.source_email}
-                        </span>
-                      ) : null}
-                      <span className="font-mono text-xs tracking-wide">
-                        {c.case_number}
-                      </span>
-                      <span aria-hidden className="text-muted-foreground/60">
-                        ·
-                      </span>
-                      <span className="truncate font-medium">
-                        {c.tenants?.company_name ??
-                          c.support_requesters?.organization_name ??
-                          translate("chaster.hq.support.prospect_no_tenant")}
-                      </span>
-                    </div>
-                    <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
-                      {c.subject}
-                    </h1>
-                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
-                      <UserCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {translate("chaster.hq.support.assignee_label")}:
-                      </span>
-                      <span className="text-sm font-semibold text-foreground">
-                        {c.assigned_to
-                          ? assigneeQ.data ?? translate("chaster.hq.support.assignee_loading")
-                          : translate("chaster.hq.support.unassigned")}
-                      </span>
-                    </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {isProspectCase ? (
-                        <Badge variant="outline" className="font-normal border-amber-500/50 text-amber-800 dark:text-amber-200">
-                          {translate("chaster.hq.support.prospect_badge")}
+                      {c.source === "email" && c.source_email ? (
+                        <Badge variant="outline" className="font-normal text-xs">
+                          {c.source_email}
                         </Badge>
                       ) : null}
-                      <SupportStatusPill status={c.status} priority={c.priority} />
                       <Badge variant="outline" className="font-normal">
                         {translate(sourceLabelKey(c.source))}
                       </Badge>
@@ -957,7 +889,7 @@ export function HqSupportCaseDetailPage() {
                       ) : null}
                       {(c.escalation_level ?? 0) > 0 ? (
                         <Badge variant="destructive" className="font-normal">
-                          Escalation Level {c.escalation_level}
+                          Escalation L{c.escalation_level}
                         </Badge>
                       ) : null}
                       {(c.tags ?? []).map((tag) => (
@@ -967,7 +899,7 @@ export function HqSupportCaseDetailPage() {
                       ))}
                     </div>
                     {c.status !== "resolved" && (c.first_response_due_at || c.resolution_due_at) ? (
-                      <div className="mt-3 flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {c.first_response_due_at ? (
                           <SlaTimerChip
                             label="Response SLA"
@@ -986,10 +918,12 @@ export function HqSupportCaseDetailPage() {
                         ) : null}
                       </div>
                     ) : null}
-                  </div>
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+                  </>
+                }
+                toolbarActions={
+                  <>
                     {canManage && c.status !== "resolved" && c.status !== "pending_client" ? (
-                      <Button type="button" className="gap-2" onClick={() => setCloseOpen(true)}>
+                      <Button type="button" size="sm" className="gap-2" onClick={() => setCloseOpen(true)}>
                         <CheckCircle2 className="h-4 w-4" />
                         {translate("chaster.hq.support.close_case_btn")}
                       </Button>
@@ -999,6 +933,7 @@ export function HqSupportCaseDetailPage() {
                       <Button
                         type="button"
                         variant="secondary"
+                        size="sm"
                         className="gap-2"
                         disabled={reopenMut.isPending}
                         onClick={() => reopenMut.mutate()}
@@ -1007,60 +942,38 @@ export function HqSupportCaseDetailPage() {
                         {translate("chaster.portal.support.thread_reopen")}
                       </Button>
                     ) : null}
-                    {c.tenant_id ? (
-                      <Button variant="outline" asChild className="gap-2">
-                        <Link to={`/hq/companies/${c.tenant_id}`}>
-                          <ExternalLink className="h-4 w-4" />
-                          {translate("chaster.hq.support.open_tenant")}
-                        </Link>
-                      </Button>
+                  </>
+                }
+                conversation={
+                  <div className="space-y-4">
+                    <CasePresenceBanner peers={presencePeers} variant="hq" />
+                    {caseId ? (
+                      <ErrorBoundary
+                        onError={(error) => {
+                          console.error("SupportCaseThread crashed", error);
+                        }}
+                        fallbackRender={({ resetErrorBoundary }) => (
+                          <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                            <p>{translate("chaster.hq.support.thread_load_error")}</p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={resetErrorBoundary}
+                            >
+                              {translate("ra.action.refresh")}
+                            </Button>
+                          </div>
+                        )}
+                      >
+                        <SupportCaseThread caseId={caseId} variant="hq" caseRow={c} />
+                      </ErrorBoundary>
                     ) : null}
                   </div>
-                </div>
-              </div>
+                }
+                sidebar={
+                <div className="space-y-4">
 
-              <div className="grid gap-8 lg:grid-cols-[1fr_min(20rem,100%)] xl:grid-cols-3">
-                <Card className="overflow-hidden border-border/80 shadow-sm lg:col-span-1 xl:col-span-2">
-                  <CardHeader className="border-b bg-muted/20 py-4 sm:py-5">
-                    <CardTitle className="text-lg">
-                      {translate("chaster.hq.support.conversation")}
-                    </CardTitle>
-                    <CardDescription>
-                      {isProspectCase
-                        ? translate("chaster.hq.support.conversation_hint_prospect")
-                        : translate("chaster.hq.support.conversation_hint")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="space-y-4 p-4 sm:p-5">
-                      <CasePresenceBanner peers={presencePeers} variant="hq" />
-                      {caseId ? (
-                        <ErrorBoundary
-                          onError={(error) => {
-                            console.error("SupportCaseThread crashed", error);
-                          }}
-                          fallbackRender={({ resetErrorBoundary }) => (
-                            <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                              <p>{translate("chaster.hq.support.thread_load_error")}</p>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={resetErrorBoundary}
-                              >
-                                {translate("ra.action.refresh")}
-                              </Button>
-                            </div>
-                          )}
-                        >
-                          <SupportCaseThread caseId={caseId} variant="hq" caseRow={c} />
-                        </ErrorBoundary>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
                   {c.satisfaction_submitted_at ? (
                     <CsatPrompt
                       caseId={c.id}
@@ -1456,7 +1369,8 @@ export function HqSupportCaseDetailPage() {
                     </CardContent>
                   </Card>
                 </div>
-              </div>
+                }
+              />
 
               <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
                 <DialogContent>

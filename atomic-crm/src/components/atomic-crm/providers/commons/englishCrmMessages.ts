@@ -954,6 +954,15 @@ export const englishCrmMessages = {
       support: {
         cases_title: "Support cases",
         cases_subtitle: "Tenant tickets and client-visible threads.",
+        console_subtitle:
+          "Triage cases in one workspace—search, assign, and reply without losing context.",
+        open_full_case: "Open full case",
+        filters: "Filters",
+        filters_title: "Refine queue",
+        filters_desc: "Narrow the list by status, company, assignee, priority, and sort order.",
+        inbox_select_case: "Select a case",
+        inbox_select_case_hint:
+          "Choose a conversation from the queue to preview and reply here, or open the full case for notes and properties.",
         case_detail: "Case detail",
         back_list: "All cases",
         col_case: "Case",
