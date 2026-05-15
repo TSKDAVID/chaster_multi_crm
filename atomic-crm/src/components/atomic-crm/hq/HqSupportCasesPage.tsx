@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
+import { logCrmError } from "@/lib/crmDebugLog";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
 import {
   AlertTriangle,
+  ChevronUp,
   Headphones,
   Inbox,
   Plus,
   Search,
   Shield,
+  UserPlus,
 } from "lucide-react";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { ChasterHQGuard } from "../access/ChasterHQGuard";
@@ -955,6 +958,7 @@ export function HqSupportCasesPage() {
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
         <ErrorBoundary
+          onError={(error, info) => logCrmError("HqSupportCasesPage", error, info)}
           fallbackRender={({ error, resetErrorBoundary }) => (
             <div className="mx-auto max-w-lg space-y-4 p-8 text-center">
               <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
