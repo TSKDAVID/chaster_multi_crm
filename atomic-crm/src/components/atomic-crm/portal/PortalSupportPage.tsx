@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
 import { Plus, Search, X, HelpCircle, BookOpen, Inbox } from "lucide-react";
@@ -48,6 +48,9 @@ import type {
   SupportCaseStatus,
   SupportFaqRow,
 } from "@/modules/support/supportTypes";
+import { useSupportCaseSearch } from "@/modules/support/hooks/useSupportCaseSearch";
+import { SupportInboxLayout } from "@/modules/support/layouts/SupportInboxLayout";
+import { SupportCaseThread } from "@/modules/support/components/SupportCaseThread";
 import { useAuthUserId } from "../access/useAuthUserId";
 import { cn } from "@/lib/utils";
 
@@ -97,6 +100,18 @@ export function PortalSupportPageContent({
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [caseSearch, setCaseSearch] = useState("");
+  const [debouncedCaseSearch, setDebouncedCaseSearch] = useState("");
+  const [assignMode, setAssignMode] = useState<"me" | "pick" | "unassigned">("me");
+  const [assignTo, setAssignTo] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCaseId = searchParams.get("caseId");
+  const ftsQ = useSupportCaseSearch("portal", debouncedCaseSearch);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedCaseSearch(caseSearch.trim()), 300);
+    return () => clearTimeout(t);
+  }, [caseSearch]);
 
   const faqsQ = useQuery({
     queryKey: ["support-faqs-active"],
@@ -228,6 +243,43 @@ export function PortalSupportPageContent({
     return groups;
   }, [filteredFaqs]);
 
+  const membersQ = useQuery({
+    queryKey: ["portal-support-assignees", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await getSupabaseClient()
+        .from("tenant_members")
+        .select("user_id, role, sales(first_name, last_name, email)")
+        .eq("tenant_id", tenantId!)
+        .in("role", ["member", "admin", "super_admin"]);
+      if (error) throw error;
+      return (data ?? []).map((row) => {
+        const r = row as {
+          user_id: string;
+          sales: { first_name: string | null; last_name: string | null; email: string | null } | null;
+        };
+        const fn = [r.sales?.first_name, r.sales?.last_name].filter(Boolean).join(" ").trim();
+        return { id: r.user_id, label: fn || r.sales?.email || r.user_id.slice(0, 8) };
+      });
+    },
+  });
+
+  const filteredCases = useMemo(() => {
+    let list = casesQ.data ?? [];
+    const q = caseSearch.trim().toLowerCase();
+    if (q.length >= 2 && ftsQ.data) {
+      const ids = new Set(ftsQ.data);
+      list = list.filter((c) => ids.has(c.id));
+    } else if (q) {
+      list = list.filter(
+        (c) =>
+          c.subject.toLowerCase().includes(q) ||
+          c.case_number.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [casesQ.data, caseSearch, ftsQ.data]);
+
   const createMut = useMutation({
     mutationFn: async () => {
       const supabase = getSupabaseClient();
@@ -240,6 +292,8 @@ export function PortalSupportPageContent({
           p_body: description.trim(),
           p_attachments: [],
           p_tags: tags,
+          p_assign_to: assignMode === "pick" && assignTo ? assignTo : null,
+          p_leave_unassigned: assignMode === "unassigned",
         },
       );
       if (error) throw error;
@@ -396,17 +450,26 @@ export function PortalSupportPageContent({
           </CardContent>
         </Card>
 
-        <Card className="min-w-0">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <CardTitle>{translate("chaster.portal.support.cases_title")}</CardTitle>
             <CardDescription>
               {translate("chaster.portal.support.list_last_activity")}
             </CardDescription>
+            <div className="relative pt-2">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-8"
+                value={caseSearch}
+                onChange={(e) => setCaseSearch(e.target.value)}
+                placeholder={translate("chaster.support.search_cases")}
+              />
+            </div>
           </CardHeader>
           <CardContent className="space-y-2">
             {casesQ.isPending ? (
               <Skeleton className="h-24 w-full" />
-            ) : (casesQ.data ?? []).length === 0 ? (
+            ) : filteredCases.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
                 <div className="rounded-full bg-muted p-3">
                   <Inbox className="h-6 w-6 text-muted-foreground" />
@@ -425,17 +488,25 @@ export function PortalSupportPageContent({
                 </PermissionGate>
               </div>
             ) : (
-              <ul className="space-y-2">
-                {(casesQ.data ?? []).map((c) => {
+              <SupportInboxLayout
+                toolbar={null}
+                queue={
+              <ul className="space-y-2 p-2">
+                {filteredCases.map((c) => {
                   const statusColor = c.status === "open" ? "border-l-blue-500" : c.status === "in_progress" ? "border-l-yellow-500" : c.status === "pending_client" ? "border-l-orange-500" : "border-l-green-500";
+                  const active = selectedCaseId === c.id;
                   return (
                     <li key={c.id}>
-                      <Link
-                        to={`/portal/support/cases/${c.id}`}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchParams({ caseId: c.id });
+                        }}
                         className={cn(
-                          "block rounded-lg border border-l-4 px-4 py-3 transition-all hover:shadow-sm hover:bg-muted/30",
+                          "block w-full rounded-lg border border-l-4 px-4 py-3 text-left transition-all hover:shadow-sm hover:bg-muted/30",
                           statusColor,
                           unreadCaseIds.has(c.id) && "bg-primary/5 ring-1 ring-primary/20",
+                          active && "ring-2 ring-primary/40",
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -467,11 +538,24 @@ export function PortalSupportPageContent({
                         <p className="text-xs text-muted-foreground mt-1">
                           {translate(categoryLabelKey(c.category))} · {new Date(c.updated_at).toLocaleString()}
                         </p>
-                      </Link>
+                      </button>
                     </li>
                   );
                 })}
               </ul>
+                }
+                detail={
+                  selectedCaseId ? (
+                    <div className="flex h-full min-h-[320px] flex-col p-4">
+                      <SupportCaseThread caseId={selectedCaseId} variant="portal" />
+                    </div>
+                  ) : (
+                    <p className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
+                      {translate("chaster.support.inbox_empty_detail")}
+                    </p>
+                  )
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -555,6 +639,33 @@ export function PortalSupportPageContent({
                 <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="Add a tag..." className="flex-1" onKeyDown={(e) => { if (e.key === "Enter" && tagInput.trim()) { e.preventDefault(); const t = tagInput.trim().toLowerCase(); if (!tags.includes(t)) setTags((p) => [...p, t]); setTagInput(""); } }} />
                 <Button type="button" variant="outline" size="sm" disabled={!tagInput.trim()} onClick={() => { const t = tagInput.trim().toLowerCase(); if (t && !tags.includes(t)) setTags((p) => [...p, t]); setTagInput(""); }}>Add</Button>
               </div>
+            </div>
+            <div className="space-y-2 border-t pt-3">
+              <Label>{translate("chaster.hq.support.new_case_assign_self")}</Label>
+              <Select value={assignMode} onValueChange={(v) => setAssignMode(v as typeof assignMode)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="me">{translate("chaster.support.assign_to_me")}</SelectItem>
+                  <SelectItem value="pick">{translate("chaster.support.assign_pick")}</SelectItem>
+                  <SelectItem value="unassigned">{translate("chaster.support.assign_unassigned")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {assignMode === "pick" ? (
+                <Select value={assignTo} onValueChange={setAssignTo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={translate("chaster.support.assign_pick")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(membersQ.data ?? []).map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
             </div>
             <div className="space-y-1">
               <Label>{translate("chaster.portal.support.form_description")}</Label>

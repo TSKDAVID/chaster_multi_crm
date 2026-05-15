@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotify, useTranslate } from "ra-core";
-import { Paperclip } from "lucide-react";
 import { getSupabaseClient } from "@/components/atomic-crm/providers/supabase/supabase";
 import { useAuthUserId } from "@/components/atomic-crm/access/useAuthUserId";
 import { useChasterAccess } from "@/components/atomic-crm/access/chasterAccessContext";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { SupportComposer } from "./SupportComposer";
+import { CsatPrompt } from "./CsatPrompt";
+import { useSupportSnippets } from "../hooks/useSupportSnippets";
+import { useSuggestReply } from "../hooks/useSuggestReply";
+import { useCasePresence } from "../hooks/useCasePresence";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -137,7 +140,7 @@ export function SupportCaseThread({
   const notify = useNotify();
   const qc = useQueryClient();
   const { data: myId } = useAuthUserId();
-  const { tenantId } = useChasterAccess();
+  const { tenantId, isOwnerSide, can, tenantMemberRole } = useChasterAccess();
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
 
@@ -219,6 +222,34 @@ export function SupportCaseThread({
     if (userId === myId) return translate("chaster.portal.support.thread_you");
     return namesQ.data?.[userId] ?? userId.slice(0, 8);
   };
+
+  const effectiveTenantId = caseQ.data?.tenant_id ?? tenantId ?? null;
+  const snippetsQ = useSupportSnippets(effectiveTenantId, variant);
+  const suggestMut = useSuggestReply();
+  const myDisplayName =
+    (myId && namesQ.data?.[myId]) ||
+    translate("chaster.portal.support.thread_you");
+  useCasePresence(caseId, myId ?? "", myDisplayName, variant === "hq" || isOwnerSide);
+
+  const onSuggestReply = async () => {
+    const tid = effectiveTenantId;
+    if (!tid) return;
+    try {
+      const draft = await suggestMut.mutateAsync({
+        tenantId: tid,
+        caseId,
+        draftHint: body.trim() || undefined,
+      });
+      setBody(draft);
+    } catch (e) {
+      notify(e instanceof Error ? e.message : String(e), { type: "warning" });
+    }
+  };
+
+  const canManageSnippets =
+    variant === "hq"
+      ? can("hq.support.cases.manage")
+      : tenantMemberRole === "admin" || tenantMemberRole === "super_admin";
 
   useEffect(() => {
     if (!caseId || !myId) return;
@@ -425,41 +456,23 @@ export function SupportCaseThread({
   }
 
   const composer = (
-    <div className="rounded-xl border border-border/80 bg-muted/20 p-3 sm:p-4">
-      <Textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder={translate("chaster.portal.support.thread_placeholder")}
-        rows={3}
-        className="min-h-[5.5rem] resize-y bg-background"
-      />
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
-          <Paperclip className="h-4 w-4 shrink-0" />
-          <input
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          />
-          <span>{translate("chaster.portal.support.form_attachments")}</span>
-        </label>
-        <div className="flex flex-1 flex-wrap items-center justify-end gap-2 sm:min-w-0">
-          {files.length > 0 ? (
-            <span className="max-w-full truncate text-xs text-muted-foreground sm:mr-auto sm:max-w-[50%]">
-              {files.map((f) => f.name).join(", ")}
-            </span>
-          ) : null}
-          <Button
-            type="button"
-            onClick={() => void onSend()}
-            disabled={sendMut.isPending}
-          >
-            {translate("chaster.portal.support.thread_send")}
-          </Button>
-        </div>
-      </div>
-    </div>
+    <SupportComposer
+      body={body}
+      onBodyChange={setBody}
+      files={files}
+      onFilesChange={setFiles}
+      onSend={() => void onSend()}
+      sending={sendMut.isPending}
+      suggestPending={suggestMut.isPending}
+      onSuggest={() => void onSuggestReply()}
+      snippets={snippetsQ.data ?? []}
+      canManageSnippets={canManageSnippets}
+      snippetManageProps={{
+        tenantId: effectiveTenantId,
+        allowGlobal: variant === "hq",
+      }}
+      disabled={variant === "portal" && resolved}
+    />
   );
 
   return (
@@ -573,6 +586,10 @@ export function SupportCaseThread({
           )
         )}
       </div>
+
+      {resolved && !c.satisfaction_submitted_at && variant === "portal" ? (
+        <CsatPrompt caseId={caseId} />
+      ) : null}
 
       {variant === "portal" && resolved ? (
         <div className="space-y-3 rounded-xl border border-dashed border-border/80 bg-muted/10 p-4">

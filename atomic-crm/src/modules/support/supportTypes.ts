@@ -77,6 +77,20 @@ export type SupportCaseRow = {
   tags?: string[];
   follow_up_at?: string | null;
   related_case_id?: string | null;
+  satisfaction_rating?: number | null;
+  satisfaction_comment?: string | null;
+  satisfaction_submitted_at?: string | null;
+};
+
+export type SupportReplySnippetRow = {
+  id: string;
+  title: string;
+  shortcut: string | null;
+  body: string;
+  scope: "hq_global" | "tenant";
+  tenant_id: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type SupportCaseMessageRow = {

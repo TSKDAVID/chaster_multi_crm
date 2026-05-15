@@ -73,6 +73,7 @@ import type {
   SupportRequesterRow,
 } from "@/modules/support/supportTypes";
 import { useSupportStaffUnreadTotal } from "@/modules/support/hooks/useSupportUnread";
+import { useSupportCaseSearch } from "@/modules/support/hooks/useSupportCaseSearch";
 import { UnreadBadge } from "@/modules/messaging/components/UnreadBadge";
 import { cn } from "@/lib/utils";
 
@@ -178,6 +179,8 @@ export function HqSupportCasesPage() {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [quickView, setQuickView] = useState<QuickView>("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const ftsQ = useSupportCaseSearch("hq", debouncedSearch);
   const [tenantFilter, setTenantFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
@@ -495,7 +498,10 @@ export function HqSupportCasesPage() {
       }
     }
 
-    if (q) {
+    if (q.length >= 2 && ftsQ.data) {
+      const ids = new Set(ftsQ.data);
+      out = out.filter((c) => ids.has(c.id));
+    } else if (q) {
       out = out.filter((c) => {
         const company = c.tenants?.company_name?.toLowerCase() ?? "";
         const rq = c.support_requesters;
@@ -528,10 +534,16 @@ export function HqSupportCasesPage() {
     tenantFilter,
     assigneeFilter,
     search,
+    ftsQ.data,
     unreadIds,
   ]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     setPage((p) => Math.min(p, Math.max(0, pageCount - 1)));
@@ -562,6 +574,7 @@ export function HqSupportCasesPage() {
           p_internal_note: newInternalNote.trim() || null,
           p_related_case_id: selectedRelatedCaseId || null,
           p_assign_to: newAssignTo || null,
+          p_leave_unassigned: !newAssignSelf && !newAssignTo,
           p_support_requester_id: selectedRequesterId || null,
         },
       );

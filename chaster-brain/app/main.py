@@ -45,6 +45,8 @@ from app.models import (
     SandboxMessageResponse,
     SandboxResetRequest,
     SandboxResetResponse,
+    SupportSuggestReplyRequest,
+    SupportSuggestReplyResponse,
     WidgetHandshakeRequest,
     WidgetHandshakeResponse,
     WidgetProcessRequest,
@@ -53,6 +55,7 @@ from app.models import (
 from app.orchestrator.graph import build_graph
 from app.orchestrator.intent_llm import is_light_greeting
 from app.rag.retriever import cache_faq_answer, get_cached_faq_answer
+from app.support_suggest import suggest_support_reply
 
 app = FastAPI(title="Chaster Brain", version="0.1.0")
 orchestrator = build_graph()
@@ -365,6 +368,37 @@ def sandbox_reset(
     # Accept both real DB conversation IDs and synthetic sandbox-* IDs.
     reset_conversation_cache(payload.conversation_id)
     return SandboxResetResponse()
+
+
+@app.post("/v1/control/support/suggest-reply", response_model=SupportSuggestReplyResponse)
+def support_suggest_reply(
+    payload: SupportSuggestReplyRequest,
+    authorization: str = Header(default="", alias="Authorization"),
+):
+    _require_tenant_control_access(authorization, payload.tenant_id)
+    runtime = get_runtime_control(payload.tenant_id)
+    if not runtime.get("is_running", True):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Chaster Brain is currently stopped for this tenant",
+        )
+    try:
+        draft, sources = suggest_support_reply(
+            tenant_id=payload.tenant_id,
+            case_id=payload.case_id,
+            draft_hint=payload.draft_hint,
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("support suggest-reply failed")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return SupportSuggestReplyResponse(
+        tenant_id=payload.tenant_id,
+        case_id=payload.case_id,
+        draft=draft,
+        used_sources=sources,
+    )
 
 
 def _resolve_ai_state(tenant_id: str) -> tuple[bool, str]:

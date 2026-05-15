@@ -12,11 +12,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SupportCaseThread } from "@/modules/support/components/SupportCaseThread";
+import { CasePresenceBanner } from "@/modules/support/components/CasePresenceBanner";
+import { useCasePresence } from "@/modules/support/hooks/useCasePresence";
+import { useAuthUserId } from "../access/useAuthUserId";
+import { useChasterAccess } from "../access/chasterAccessContext";
 import { PortalQuickNav } from "./PortalQuickNav";
 
 export function PortalSupportCasePage() {
   const { caseId } = useParams<{ caseId: string }>();
   const translate = useTranslate();
+  const { data: myId } = useAuthUserId();
+  const { isOwnerSide } = useChasterAccess();
+  const presencePeers = useCasePresence(
+    caseId ?? null,
+    myId ?? "",
+    translate("chaster.portal.support.thread_you"),
+    isOwnerSide,
+  );
 
   return (
     <TenantPortalGuard>
@@ -39,7 +51,8 @@ export function PortalSupportCasePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="p-4 sm:p-6">
+              <div className="space-y-4 p-4 sm:p-6">
+                <CasePresenceBanner peers={presencePeers} variant="portal" />
                 {caseId ? (
                   <SupportCaseThread caseId={caseId} variant="portal" />
                 ) : (

@@ -52,6 +52,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { SupportCaseThread } from "@/modules/support/components/SupportCaseThread";
+import { CasePresenceBanner } from "@/modules/support/components/CasePresenceBanner";
+import { CsatPrompt } from "@/modules/support/components/CsatPrompt";
+import { useCasePresence } from "@/modules/support/hooks/useCasePresence";
+import { useChasterAccess } from "../access/chasterAccessContext";
 import type {
   SupportCasePriority,
   SupportCaseRow,
@@ -248,6 +252,13 @@ export function HqSupportCaseDetailPage() {
   const qc = useQueryClient();
   const { can } = useCurrentUserRole();
   const { data: myId } = useAuthUserId();
+  const { isOwnerSide } = useChasterAccess();
+  const presencePeers = useCasePresence(
+    caseId ?? null,
+    myId ?? "",
+    "Staff",
+    isOwnerSide,
+  );
   const [status, setStatus] = useState<SupportCaseStatus>("open");
   const [priority, setPriority] = useState<SupportCasePriority>("medium");
   const [source, setSource] = useState<SupportCaseSource>("portal");
@@ -837,7 +848,8 @@ export function HqSupportCaseDetailPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="p-4 sm:p-5">
+                    <div className="space-y-4 p-4 sm:p-5">
+                      <CasePresenceBanner peers={presencePeers} variant="hq" />
                       {caseId ? (
                         <SupportCaseThread caseId={caseId} variant="hq" />
                       ) : null}
@@ -846,6 +858,14 @@ export function HqSupportCaseDetailPage() {
                 </Card>
 
                 <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+                  {c.satisfaction_submitted_at ? (
+                    <CsatPrompt
+                      caseId={c.id}
+                      readOnly
+                      rating={c.satisfaction_rating ?? null}
+                      comment={c.satisfaction_comment ?? null}
+                    />
+                  ) : null}
                   <Card className="border-border/80 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base">
