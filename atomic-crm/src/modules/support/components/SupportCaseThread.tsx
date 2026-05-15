@@ -8,6 +8,7 @@ import { useChasterAccess } from "@/components/atomic-crm/access/chasterAccessCo
 import { useCurrentUserRole } from "@/components/atomic-crm/access/useCurrentUserRole";
 import { Button } from "@/components/ui/button";
 import { SafeSupportComposer } from "./SupportThreadExtras";
+import { SupportReplyBox } from "./SupportReplyBox";
 import { CsatPrompt } from "./CsatPrompt";
 import { useSupportSnippets } from "../hooks/useSupportSnippets";
 import { useSuggestReply } from "../hooks/useSuggestReply";
@@ -161,9 +162,12 @@ function statusLabelKey(status: SupportCaseStatus): string {
 export function SupportCaseThread({
   caseId,
   variant,
+  caseRow: caseRowProp,
 }: {
   caseId: string;
   variant: Variant;
+  /** When provided (HQ detail), skips a duplicate case fetch. */
+  caseRow?: SupportCaseRow | null;
 }) {
   const translate = useTranslate();
   const notify = useNotify();
@@ -176,7 +180,7 @@ export function SupportCaseThread({
 
   const caseQ = useQuery({
     queryKey: ["support-case-thread", caseId],
-    enabled: !!caseId,
+    enabled: !!caseId && caseRowProp === undefined,
     queryFn: async () => {
       const { data, error } = await getSupabaseClient()
         .from("support_cases")
@@ -210,7 +214,7 @@ export function SupportCaseThread({
 
   const nameIds = useMemo(() => {
     const s = new Set<string>();
-    const c = caseQ.data;
+    const c = caseRowProp !== undefined ? caseRowProp : caseQ.data;
     if (c?.assigned_to) s.add(c.assigned_to);
     for (const m of messagesQ.data ?? []) {
       if (m.sender_id) s.add(m.sender_id);
@@ -221,7 +225,7 @@ export function SupportCaseThread({
     });
     for (const id of meta ?? []) s.add(id);
     return [...s];
-  }, [caseQ.data, messagesQ.data]);
+  }, [caseRowProp, caseQ.data, messagesQ.data]);
 
   const namesQ = useQuery({
     queryKey: ["support-sales-names", nameIds],
@@ -253,13 +257,26 @@ export function SupportCaseThread({
     return namesQ.data?.[userId] ?? userId.slice(0, 8);
   };
 
-  const effectiveTenantId = caseQ.data?.tenant_id ?? tenantId ?? null;
-  const snippetsQ = useSupportSnippets(effectiveTenantId, variant, Boolean(caseQ.data));
+  const cFromQuery = caseQ.data;
+  const cEarly = caseRowProp !== undefined ? caseRowProp : cFromQuery;
+
+  const effectiveTenantId = cEarly?.tenant_id ?? tenantId ?? null;
+  const useFullComposer = variant === "portal";
+  const snippetsQ = useSupportSnippets(
+    effectiveTenantId,
+    variant,
+    useFullComposer && Boolean(cEarly),
+  );
   const suggestMut = useSuggestReply();
   const myDisplayName =
     (myId && namesQ.data?.[myId]) ||
     translate("chaster.portal.support.thread_you");
-  useCasePresence(caseId, myId ?? "", myDisplayName, variant === "hq" || isOwnerSide);
+  useCasePresence(
+    variant === "hq" ? null : caseId,
+    myId ?? "",
+    myDisplayName,
+    isOwnerSide,
+  );
 
   const onSuggestReply = async () => {
     const tid = effectiveTenantId;
@@ -391,7 +408,7 @@ export function SupportCaseThread({
   });
 
   const uploadAttachments = async (): Promise<SupportAttachmentMeta[]> => {
-    const row = caseQ.data;
+    const row = cEarly;
     if (!row) return [];
     const tid = row.tenant_id ?? tenantId ?? null;
     const folderPrefix =
@@ -437,6 +454,18 @@ export function SupportCaseThread({
     sendMut.mutate({ body: text || " ", attachments: atts });
   };
 
+  const safeStatusKey = (raw: string): SupportCaseStatus => {
+    const allowed: SupportCaseStatus[] = [
+      "open",
+      "in_progress",
+      "pending_client",
+      "resolved",
+    ];
+    return allowed.includes(raw as SupportCaseStatus)
+      ? (raw as SupportCaseStatus)
+      : "open";
+  };
+
   const renderSystem = (m: SupportCaseMessageRow) => {
     const kind = m.metadata?.kind;
     if (kind === "status_changed") {
@@ -445,8 +474,8 @@ export function SupportCaseThread({
       return (
         <p className="text-xs leading-relaxed text-muted-foreground">
           {translate("chaster.portal.support.thread_system_status", {
-            from: translate(statusLabelKey(from as SupportCaseStatus)),
-            to: translate(statusLabelKey(to as SupportCaseStatus)),
+            from: translate(statusLabelKey(safeStatusKey(from))),
+            to: translate(statusLabelKey(safeStatusKey(to))),
           })}
         </p>
       );
@@ -473,7 +502,7 @@ export function SupportCaseThread({
   const showCaseMeta = variant === "portal";
   const messages = messagesQ.data ?? [];
 
-  if (caseQ.isPending || !c) {
+  if (caseLoading || !c) {
     return (
       <div className="flex min-h-[280px] flex-col gap-4">
         <div className="flex flex-wrap gap-2">
@@ -489,25 +518,36 @@ export function SupportCaseThread({
     );
   }
 
-  const composer = (
-    <SafeSupportComposer
-      body={body}
-      onBodyChange={setBody}
-      files={files}
-      onFilesChange={setFiles}
-      onSend={() => void onSend()}
-      sending={sendMut.isPending}
-      suggestPending={suggestMut.isPending}
-      onSuggest={() => void onSuggestReply()}
-      snippets={snippetsQ.data ?? []}
-      canManageSnippets={canManageSnippets}
-      snippetManageProps={{
-        tenantId: effectiveTenantId,
-        allowGlobal: variant === "hq",
-      }}
-      disabled={variant === "portal" && resolved}
-    />
-  );
+  const composer =
+    variant === "hq" ? (
+      <SupportReplyBox
+        body={body}
+        onBodyChange={setBody}
+        files={files}
+        onFilesChange={setFiles}
+        onSend={() => void onSend()}
+        sending={sendMut.isPending}
+        disabled={resolved}
+      />
+    ) : (
+      <SafeSupportComposer
+        body={body}
+        onBodyChange={setBody}
+        files={files}
+        onFilesChange={setFiles}
+        onSend={() => void onSend()}
+        sending={sendMut.isPending}
+        suggestPending={suggestMut.isPending}
+        onSuggest={() => void onSuggestReply()}
+        snippets={snippetsQ.data ?? []}
+        canManageSnippets={canManageSnippets}
+        snippetManageProps={{
+          tenantId: effectiveTenantId,
+          allowGlobal: false,
+        }}
+        disabled={resolved}
+      />
+    );
 
   return (
     <div className="flex min-h-[320px] flex-col gap-5">

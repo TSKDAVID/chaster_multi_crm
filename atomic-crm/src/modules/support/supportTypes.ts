@@ -22,6 +22,15 @@ export type SupportCaseSource =
   | "other"
   | "prospect";
 
+/** Why an agent closed the case (HQ console). */
+export type SupportCaseClosureReason =
+  | "resolved"
+  | "pending_customer"
+  | "duplicate"
+  | "cannot_resolve"
+  | "spam"
+  | "cancelled";
+
 export type SupportAttachmentMeta = {
   storage_path: string;
   file_name: string;
@@ -80,6 +89,8 @@ export type SupportCaseRow = {
   satisfaction_rating?: number | null;
   satisfaction_comment?: string | null;
   satisfaction_submitted_at?: string | null;
+  closure_reason?: SupportCaseClosureReason | null;
+  closure_note?: string | null;
 };
 
 export type SupportReplySnippetRow = {

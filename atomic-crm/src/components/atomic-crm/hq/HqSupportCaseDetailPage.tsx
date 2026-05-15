@@ -7,7 +7,17 @@ import {
   FunctionsFetchError,
   FunctionsHttpError,
 } from "@supabase/supabase-js";
-import { ArrowLeft, CalendarClock, ExternalLink, Link2, Tag, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarClock,
+  CheckCircle2,
+  ExternalLink,
+  Link2,
+  RotateCcw,
+  Tag,
+  UserCircle,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { ChasterHQGuard } from "../access/ChasterHQGuard";
@@ -53,12 +63,15 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { SupportCaseThread } from "@/modules/support/components/SupportCaseThread";
+import { CloseCaseDialog } from "@/modules/support/components/CloseCaseDialog";
 import { CasePresenceBanner } from "@/modules/support/components/CasePresenceBanner";
 import { CsatPrompt } from "@/modules/support/components/CsatPrompt";
+import { SupportStatusPill } from "@/modules/support/components/SupportStatusPill";
 import { useCasePresence } from "@/modules/support/hooks/useCasePresence";
 import { safeSelectValue } from "@/modules/support/lib/selectValue";
 import { useChasterAccess } from "../access/chasterAccessContext";
 import type {
+  SupportCaseClosureReason,
   SupportCasePriority,
   SupportCaseRow,
   SupportCaseSource,
@@ -191,6 +204,10 @@ function priorityLabelKey(p: SupportCasePriority): string {
   }
 }
 
+function closureLabelKey(r: SupportCaseClosureReason): string {
+  return `chaster.hq.support.closure_${r}`;
+}
+
 function sourceLabelKey(s: SupportCaseSource): string {
   switch (s) {
     case "portal":
@@ -266,6 +283,7 @@ export function HqSupportCaseDetailPage() {
   const [source, setSource] = useState<SupportCaseSource>("portal");
   const [noteBody, setNoteBody] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [reqOrg, setReqOrg] = useState("");
   const [reqFirst, setReqFirst] = useState("");
@@ -415,6 +433,28 @@ export function HqSupportCaseDetailPage() {
     return ids;
   }, [notesQ.data]);
 
+  const assigneeQ = useQuery({
+    queryKey: ["support-case-assignee", c?.assigned_to],
+    enabled: !!c?.assigned_to,
+    queryFn: async () => {
+      const { data, error } = await getSupabaseClient()
+        .from("sales")
+        .select("user_id, first_name, last_name, email")
+        .eq("user_id", c!.assigned_to!)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      const o = data as {
+        user_id: string;
+        first_name: string | null;
+        last_name: string | null;
+        email: string | null;
+      };
+      const fn = [o.first_name, o.last_name].filter(Boolean).join(" ").trim();
+      return fn || o.email || o.user_id.slice(0, 8);
+    },
+  });
+
   const authorQ = useQuery({
     queryKey: ["support-note-authors", authorNames],
     enabled: authorNames.length > 0,
@@ -437,6 +477,57 @@ export function HqSupportCaseDetailPage() {
       }
       return out;
     },
+  });
+
+  const closeCaseMut = useMutation({
+    mutationFn: async (payload: {
+      reason: SupportCaseClosureReason;
+      note: string;
+    }) => {
+      const nextStatus: SupportCaseStatus =
+        payload.reason === "pending_customer" ? "pending_client" : "resolved";
+      const resolvedAt =
+        nextStatus === "resolved" ? new Date().toISOString() : null;
+      const { error } = await getSupabaseClient()
+        .from("support_cases")
+        .update({
+          status: nextStatus,
+          resolved_at: resolvedAt,
+          closure_reason: payload.reason,
+          closure_note: payload.note || null,
+        })
+        .eq("id", caseId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setCloseOpen(false);
+      notify(translate("chaster.hq.support.close_case_success"), {
+        type: "success",
+      });
+      void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+      void qc.invalidateQueries({ queryKey: ["support-case-thread", caseId] });
+      void qc.invalidateQueries({ queryKey: ["support-messages", caseId] });
+      void qc.invalidateQueries({ queryKey: ["hq-support-cases"] });
+    },
+    onError: (e: Error) => notify(e.message, { type: "error" }),
+  });
+
+  const reopenMut = useMutation({
+    mutationFn: async () => {
+      const { error } = await getSupabaseClient().rpc("reopen_support_case", {
+        p_case_id: caseId!,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      notify(translate("chaster.portal.support.case_reopened"), {
+        type: "success",
+      });
+      void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+      void qc.invalidateQueries({ queryKey: ["support-case-thread", caseId] });
+      void qc.invalidateQueries({ queryKey: ["hq-support-cases"] });
+    },
+    onError: (e: Error) => notify(e.message, { type: "error" }),
   });
 
   const saveMut = useMutation({
@@ -465,6 +556,7 @@ export function HqSupportCaseDetailPage() {
     onSuccess: () => {
       notify(translate("chaster.hq.support.saved"), { type: "success" });
       void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
+      void qc.invalidateQueries({ queryKey: ["support-case-thread", caseId] });
       void qc.invalidateQueries({ queryKey: ["hq-support-cases"] });
       void qc.invalidateQueries({ queryKey: ["support-messages", caseId] });
     },
@@ -797,21 +889,32 @@ export function HqSupportCaseDetailPage() {
                     <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
                       {c.subject}
                     </h1>
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+                      <UserCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {translate("chaster.hq.support.assignee_label")}:
+                      </span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {c.assigned_to
+                          ? assigneeQ.data ?? translate("chaster.hq.support.assignee_loading")
+                          : translate("chaster.hq.support.unassigned")}
+                      </span>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {isProspectCase ? (
                         <Badge variant="outline" className="font-normal border-amber-500/50 text-amber-800 dark:text-amber-200">
                           {translate("chaster.hq.support.prospect_badge")}
                         </Badge>
                       ) : null}
-                      <Badge variant="secondary" className="font-normal">
-                        {translate(statusLabelKey(c.status))}
-                      </Badge>
-                      <Badge variant="outline" className="font-normal">
-                        {translate(priorityLabelKey(c.priority))}
-                      </Badge>
+                      <SupportStatusPill status={c.status} priority={c.priority} />
                       <Badge variant="outline" className="font-normal">
                         {translate(sourceLabelKey(c.source))}
                       </Badge>
+                      {c.closure_reason ? (
+                        <Badge variant="secondary" className="font-normal">
+                          {translate(closureLabelKey(c.closure_reason))}
+                        </Badge>
+                      ) : null}
                       {(c.escalation_level ?? 0) > 0 ? (
                         <Badge variant="destructive" className="font-normal">
                           Escalation Level {c.escalation_level}
@@ -844,17 +947,35 @@ export function HqSupportCaseDetailPage() {
                       </div>
                     ) : null}
                   </div>
-                  {c.tenant_id ? (
-                    <Button variant="outline" size="sm" asChild className="shrink-0">
-                      <Link
-                        to={`/hq/companies/${c.tenant_id}`}
-                        className="inline-flex items-center gap-2"
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+                    {canManage && c.status !== "resolved" && c.status !== "pending_client" ? (
+                      <Button type="button" className="gap-2" onClick={() => setCloseOpen(true)}>
+                        <CheckCircle2 className="h-4 w-4" />
+                        {translate("chaster.hq.support.close_case_btn")}
+                      </Button>
+                    ) : null}
+                    {canManage &&
+                    (c.status === "resolved" || c.status === "pending_client") ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="gap-2"
+                        disabled={reopenMut.isPending}
+                        onClick={() => reopenMut.mutate()}
                       >
-                        <ExternalLink className="h-4 w-4" />
-                        {translate("chaster.hq.support.open_tenant")}
-                      </Link>
-                    </Button>
-                  ) : null}
+                        <RotateCcw className="h-4 w-4" />
+                        {translate("chaster.portal.support.thread_reopen")}
+                      </Button>
+                    ) : null}
+                    {c.tenant_id ? (
+                      <Button variant="outline" asChild className="gap-2">
+                        <Link to={`/hq/companies/${c.tenant_id}`}>
+                          <ExternalLink className="h-4 w-4" />
+                          {translate("chaster.hq.support.open_tenant")}
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
@@ -892,7 +1013,7 @@ export function HqSupportCaseDetailPage() {
                             </div>
                           )}
                         >
-                          <SupportCaseThread caseId={caseId} variant="hq" />
+                          <SupportCaseThread caseId={caseId} variant="hq" caseRow={c} />
                         </ErrorBoundary>
                       ) : null}
                     </div>
@@ -1434,6 +1555,13 @@ export function HqSupportCaseDetailPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              <CloseCaseDialog
+                open={closeOpen}
+                onOpenChange={setCloseOpen}
+                pending={closeCaseMut.isPending}
+                onConfirm={(payload) => closeCaseMut.mutate(payload)}
+              />
             </>
           )}
         </div>
