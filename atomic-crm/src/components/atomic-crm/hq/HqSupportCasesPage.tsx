@@ -74,6 +74,7 @@ import type {
 } from "@/modules/support/supportTypes";
 import { useSupportStaffUnreadTotal } from "@/modules/support/hooks/useSupportUnread";
 import { useSupportCaseSearch } from "@/modules/support/hooks/useSupportCaseSearch";
+import { CHASTER_SELECT_NONE } from "../sales/SalesProvisioningInputs";
 import { UnreadBadge } from "@/modules/messaging/components/UnreadBadge";
 import { cn } from "@/lib/utils";
 
@@ -573,8 +574,11 @@ export function HqSupportCasesPage() {
           p_follow_up_at: newFollowUp ? new Date(newFollowUp).toISOString() : null,
           p_internal_note: newInternalNote.trim() || null,
           p_related_case_id: selectedRelatedCaseId || null,
-          p_assign_to: newAssignTo || null,
-          p_leave_unassigned: !newAssignSelf && !newAssignTo,
+          p_assign_to:
+            newAssignTo && newAssignTo !== CHASTER_SELECT_NONE ? newAssignTo : null,
+          p_leave_unassigned:
+            !newAssignSelf &&
+            (!newAssignTo || newAssignTo === CHASTER_SELECT_NONE),
           p_support_requester_id: selectedRequesterId || null,
         },
       );
@@ -1848,7 +1852,9 @@ export function HqSupportCasesPage() {
                       <Select value={newAssignTo} onValueChange={setNewAssignTo}>
                         <SelectTrigger><SelectValue placeholder="Select agent..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value={CHASTER_SELECT_NONE}>
+                            {translate("chaster.hq.support.unassigned")}
+                          </SelectItem>
                           {(staffListQ.data ?? []).map((s) => (
                             <SelectItem key={s.user_id} value={s.user_id}>{s.label}</SelectItem>
                           ))}

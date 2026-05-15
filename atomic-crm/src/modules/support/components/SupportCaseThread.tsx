@@ -4,8 +4,9 @@ import { useNotify, useTranslate } from "ra-core";
 import { getSupabaseClient } from "@/components/atomic-crm/providers/supabase/supabase";
 import { useAuthUserId } from "@/components/atomic-crm/access/useAuthUserId";
 import { useChasterAccess } from "@/components/atomic-crm/access/chasterAccessContext";
+import { useCurrentUserRole } from "@/components/atomic-crm/access/useCurrentUserRole";
 import { Button } from "@/components/ui/button";
-import { SupportComposer } from "./SupportComposer";
+import { SafeSupportComposer } from "./SupportThreadExtras";
 import { CsatPrompt } from "./CsatPrompt";
 import { useSupportSnippets } from "../hooks/useSupportSnippets";
 import { useSuggestReply } from "../hooks/useSuggestReply";
@@ -140,7 +141,8 @@ export function SupportCaseThread({
   const notify = useNotify();
   const qc = useQueryClient();
   const { data: myId } = useAuthUserId();
-  const { tenantId, isOwnerSide, can, tenantMemberRole } = useChasterAccess();
+  const { tenantId, isOwnerSide } = useChasterAccess();
+  const { can, tenantMemberRole } = useCurrentUserRole();
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
 
@@ -224,7 +226,7 @@ export function SupportCaseThread({
   };
 
   const effectiveTenantId = caseQ.data?.tenant_id ?? tenantId ?? null;
-  const snippetsQ = useSupportSnippets(effectiveTenantId, variant);
+  const snippetsQ = useSupportSnippets(effectiveTenantId, variant, Boolean(caseQ.data));
   const suggestMut = useSuggestReply();
   const myDisplayName =
     (myId && namesQ.data?.[myId]) ||
@@ -249,7 +251,8 @@ export function SupportCaseThread({
   const canManageSnippets =
     variant === "hq"
       ? can("hq.support.cases.manage")
-      : tenantMemberRole === "admin" || tenantMemberRole === "super_admin";
+      : tenantMemberRole === "workspace_admin" ||
+        tenantMemberRole === "workspace_owner";
 
   useEffect(() => {
     if (!caseId || !myId) return;
@@ -456,7 +459,7 @@ export function SupportCaseThread({
   }
 
   const composer = (
-    <SupportComposer
+    <SafeSupportComposer
       body={body}
       onBodyChange={setBody}
       files={files}

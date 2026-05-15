@@ -2,31 +2,73 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSupabaseClient } from "@/components/atomic-crm/providers/supabase/supabase";
 import type { SupportReplySnippetRow } from "../supportTypes";
 
-export function useSupportSnippets(tenantId: string | null, variant: "portal" | "hq") {
+async function fetchSnippets(
+  tenantId: string | null,
+  variant: "portal" | "hq",
+): Promise<SupportReplySnippetRow[]> {
+  const supabase = getSupabaseClient();
+  const select =
+    "id,title,shortcut,body,scope,tenant_id,created_at,updated_at";
+
+  try {
+    if (variant === "portal" && tenantId) {
+      const { data, error } = await supabase
+        .from("support_reply_snippets")
+        .select(select)
+        .eq("scope", "tenant")
+        .eq("tenant_id", tenantId)
+        .order("title", { ascending: true });
+      if (error) {
+        console.warn("support snippets (portal)", error.message);
+        return [];
+      }
+      return (data ?? []) as SupportReplySnippetRow[];
+    }
+
+    if (variant === "hq") {
+      const { data: globalRows, error: globalErr } = await supabase
+        .from("support_reply_snippets")
+        .select(select)
+        .eq("scope", "hq_global")
+        .order("title", { ascending: true });
+      if (globalErr) {
+        console.warn("support snippets (hq global)", globalErr.message);
+        return [];
+      }
+      let tenantRows: SupportReplySnippetRow[] = [];
+      if (tenantId) {
+        const { data, error } = await supabase
+          .from("support_reply_snippets")
+          .select(select)
+          .eq("scope", "tenant")
+          .eq("tenant_id", tenantId)
+          .order("title", { ascending: true });
+        if (error) {
+          console.warn("support snippets (hq tenant)", error.message);
+        } else {
+          tenantRows = (data ?? []) as SupportReplySnippetRow[];
+        }
+      }
+      return [...((globalRows ?? []) as SupportReplySnippetRow[]), ...tenantRows];
+    }
+
+    return [];
+  } catch (e) {
+    console.warn("support snippets fetch failed", e);
+    return [];
+  }
+}
+
+export function useSupportSnippets(
+  tenantId: string | null,
+  variant: "portal" | "hq",
+  enabled = true,
+) {
   return useQuery({
     queryKey: ["support-snippets", variant, tenantId],
-    enabled: variant === "hq" || Boolean(tenantId),
-    queryFn: async (): Promise<SupportReplySnippetRow[]> => {
-      const supabase = getSupabaseClient();
-      let q = supabase
-        .from("support_reply_snippets")
-        .select("id,title,shortcut,body,scope,tenant_id,created_at,updated_at")
-        .order("title", { ascending: true });
-
-      if (variant === "portal" && tenantId) {
-        q = q.eq("scope", "tenant").eq("tenant_id", tenantId);
-      } else if (variant === "hq") {
-        q = q.or(
-          tenantId
-            ? `scope.eq.hq_global,and(scope.eq.tenant,tenant_id.eq.${tenantId})`
-            : "scope.eq.hq_global",
-        );
-      }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as SupportReplySnippetRow[];
-    },
+    enabled: enabled && (variant === "hq" || Boolean(tenantId)),
+    retry: false,
+    queryFn: () => fetchSnippets(tenantId, variant),
   });
 }
 

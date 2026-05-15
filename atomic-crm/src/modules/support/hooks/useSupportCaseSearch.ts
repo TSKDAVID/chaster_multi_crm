@@ -11,16 +11,25 @@ export function useSupportCaseSearch(
     queryKey: ["support-case-search", variant, trimmed],
     enabled: enabled && trimmed.length >= 2,
     staleTime: 30_000,
+    retry: false,
     queryFn: async (): Promise<string[]> => {
       const supabase = getSupabaseClient();
       const rpc =
         variant === "hq" ? "search_support_cases_hq" : "search_support_cases_portal";
-      const { data, error } = await supabase.rpc(rpc, {
-        p_query: trimmed,
-        p_limit: 50,
-      });
-      if (error) throw error;
-      return (data ?? []).map((r: { case_id: string }) => String(r.case_id));
+      try {
+        const { data, error } = await supabase.rpc(rpc, {
+          p_query: trimmed,
+          p_limit: 50,
+        });
+        if (error) {
+          console.warn("support case search", error.message);
+          return [];
+        }
+        return (data ?? []).map((r: { case_id: string }) => String(r.case_id));
+      } catch (e) {
+        console.warn("support case search failed", e);
+        return [];
+      }
     },
   });
 }

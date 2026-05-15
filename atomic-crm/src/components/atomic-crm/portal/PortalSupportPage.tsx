@@ -247,19 +247,35 @@ export function PortalSupportPageContent({
     queryKey: ["portal-support-assignees", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await getSupabaseClient()
+      const supabase = getSupabaseClient();
+      const { data: members, error: memErr } = await supabase
         .from("tenant_members")
-        .select("user_id, role, sales(first_name, last_name, email)")
+        .select("user_id, role")
         .eq("tenant_id", tenantId!)
-        .in("role", ["member", "admin", "super_admin"]);
-      if (error) throw error;
-      return (data ?? []).map((row) => {
-        const r = row as {
-          user_id: string;
-          sales: { first_name: string | null; last_name: string | null; email: string | null } | null;
-        };
-        const fn = [r.sales?.first_name, r.sales?.last_name].filter(Boolean).join(" ").trim();
-        return { id: r.user_id, label: fn || r.sales?.email || r.user_id.slice(0, 8) };
+        .neq("role", "viewer");
+      if (memErr) throw memErr;
+      const userIds = (members ?? []).map((m) => (m as { user_id: string }).user_id);
+      if (userIds.length === 0) return [];
+      const { data: salesRows, error: salesErr } = await supabase
+        .from("sales")
+        .select("user_id, first_name, last_name, email")
+        .in("user_id", userIds);
+      if (salesErr) throw salesErr;
+      const byUser = new Map(
+        (salesRows ?? []).map((s) => {
+          const row = s as {
+            user_id: string;
+            first_name: string | null;
+            last_name: string | null;
+            email: string | null;
+          };
+          return [row.user_id, row] as const;
+        }),
+      );
+      return userIds.map((uid) => {
+        const s = byUser.get(uid);
+        const fn = [s?.first_name, s?.last_name].filter(Boolean).join(" ").trim();
+        return { id: uid, label: fn || s?.email || uid.slice(0, 8) };
       });
     },
   });
