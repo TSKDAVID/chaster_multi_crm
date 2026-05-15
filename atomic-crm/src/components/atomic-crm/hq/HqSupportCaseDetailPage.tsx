@@ -204,8 +204,20 @@ function priorityLabelKey(p: SupportCasePriority): string {
   }
 }
 
-function closureLabelKey(r: SupportCaseClosureReason): string {
-  return `chaster.hq.support.closure_${r}`;
+const CLOSURE_REASONS = [
+  "resolved",
+  "pending_customer",
+  "duplicate",
+  "cannot_resolve",
+  "spam",
+  "cancelled",
+] as const satisfies readonly SupportCaseClosureReason[];
+
+function closureLabelKey(r: string | null | undefined): string {
+  if (r && (CLOSURE_REASONS as readonly string[]).includes(r)) {
+    return `chaster.hq.support.closure_${r}`;
+  }
+  return "chaster.hq.support.closure_resolved";
 }
 
 function sourceLabelKey(s: SupportCaseSource): string {
@@ -233,10 +245,37 @@ function normalizeCaseDetail(
   const row = r as unknown as CaseDetail;
   const sr = row.support_requesters;
   const desc = row.description;
+  const statusRaw = row.status as SupportCaseStatus | undefined;
+  const priorityRaw = row.priority as SupportCasePriority | undefined;
+  const sourceRaw = row.source as SupportCaseSource | undefined;
   return {
     ...row,
-    priority: (row.priority as SupportCasePriority) ?? "medium",
-    source: (row.source as SupportCaseSource) ?? "portal",
+    status:
+      statusRaw === "open" ||
+      statusRaw === "in_progress" ||
+      statusRaw === "pending_client" ||
+      statusRaw === "resolved"
+        ? statusRaw
+        : "open",
+    priority:
+      priorityRaw === "low" ||
+      priorityRaw === "medium" ||
+      priorityRaw === "high" ||
+      priorityRaw === "urgent"
+        ? priorityRaw
+        : "medium",
+    source:
+      sourceRaw === "portal" ||
+      sourceRaw === "phone" ||
+      sourceRaw === "email" ||
+      sourceRaw === "hq" ||
+      sourceRaw === "other" ||
+      sourceRaw === "prospect"
+        ? sourceRaw
+        : "portal",
+    tags: Array.isArray(row.tags)
+      ? row.tags.filter((t): t is string => typeof t === "string")
+      : [],
     description:
       typeof desc === "string" ? desc : "",
     support_requesters:
@@ -270,6 +309,7 @@ export function HqSupportCaseDetailPage() {
   const notify = useNotify();
   const qc = useQueryClient();
   const { can } = useCurrentUserRole();
+  const canManage = can("hq.support.cases.manage");
   const { data: myId } = useAuthUserId();
   const { isOwnerSide } = useChasterAccess();
   const presencePeers = useCasePresence(
