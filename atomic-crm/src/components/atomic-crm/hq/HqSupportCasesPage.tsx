@@ -61,6 +61,7 @@ import { useSupportCaseSearch } from "@/modules/support/hooks/useSupportCaseSear
 import { HqSupportCaseListItem } from "@/modules/support/components/HqSupportCaseListItem";
 import { HqSupportCasePreview } from "@/modules/support/components/HqSupportCasePreview";
 import { SupportViewportShell } from "@/modules/support/components/SupportViewportShell";
+import { supportScrollAreaClass } from "@/modules/support/lib/supportScroll";
 import { HqSupportFilterSheet } from "@/modules/support/components/HqSupportFilterSheet";
 import { HqSupportMetricsStrip } from "@/modules/support/components/HqSupportMetricsStrip";
 import {
@@ -975,7 +976,7 @@ export function HqSupportCasesPage() {
           )}
         >
         <SupportViewportShell>
-        <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 py-2 sm:px-4 sm:py-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4 sm:py-3">
           <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <Headphones className="h-6 w-6 shrink-0 text-primary" />
@@ -1008,6 +1009,7 @@ export function HqSupportCasesPage() {
             </div>
           </header>
 
+          <div className="shrink-0">
           <HqSupportMetricsStrip
             metrics={{
               open: kpis.open + kpis.inProgress + kpis.pendingClient,
@@ -1019,9 +1021,10 @@ export function HqSupportCasesPage() {
             activeKey={metricsActiveKey}
             onSelect={onMetricSelect}
           />
+          </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border/80 bg-background lg:flex-row">
-            <section className="flex w-full min-h-0 flex-col border-b border-border/80 lg:w-[380px] lg:max-w-[42%] lg:shrink-0 lg:border-b-0 lg:border-r">
+            <section className="flex min-h-0 w-full flex-col border-b border-border/80 lg:w-[380px] lg:max-w-[42%] lg:shrink-0 lg:border-b-0 lg:border-r">
               <div className="shrink-0 space-y-3 border-b border-border/80 p-3">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1105,7 +1108,7 @@ export function HqSupportCasesPage() {
                 </p>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto p-2">
+              <div className={cn(supportScrollAreaClass, "flex-1 p-2")}>
                 {casesQ.isPending ? (
                   <div className="space-y-2 p-2">
                     <Skeleton className="h-16 w-full rounded-lg" />
@@ -1202,6 +1205,8 @@ export function HqSupportCasesPage() {
             </section>
           </div>
         </div>
+
+        </SupportViewportShell>
 
         <Dialog
             open={newOpen}
@@ -1724,7 +1729,6 @@ export function HqSupportCasesPage() {
               </DialogFooter>
             </DialogContent>
         </Dialog>
-        </SupportViewportShell>
         </ErrorBoundary>
         </div>
       </PermissionGate>

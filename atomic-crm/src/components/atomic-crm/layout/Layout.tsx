@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { ErrorBoundary } from "react-error-boundary";
 import { cn } from "@/lib/utils";
@@ -20,11 +20,25 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
   const supportViewport = isSupportViewportRoute(pathname);
 
+  useEffect(() => {
+    if (!supportViewport) return;
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = prev;
+    };
+  }, [supportViewport]);
+
   return (
     <ChasterAccessProvider>
       <SupabaseAuthHashRedirect />
       <ClientTenantBranding />
-      <div className="flex min-h-dvh flex-col">
+      <div
+        className={cn(
+          "flex flex-col",
+          supportViewport ? "h-dvh max-h-dvh overflow-hidden" : "min-h-dvh",
+        )}
+      >
         <Header />
         <main
           id="main-content"

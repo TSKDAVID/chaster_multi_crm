@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { useTranslate } from "ra-core";
+import { cn } from "@/lib/utils";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SupportStatusPill } from "./SupportStatusPill";
 import type { SupportCaseRow, SupportRequesterRow } from "../supportTypes";
 import { tenantDisplayName } from "../lib/supportDisplay";
+import { supportScrollAreaClass } from "../lib/supportScroll";
 
 export type HqCaseWorkspaceRow = SupportCaseRow & {
   tenants?: { company_name: string } | null;
@@ -91,13 +93,13 @@ export function HqSupportCaseWorkspace({
             {conversation}
           </div>
         </section>
-        <aside className="flex min-h-0 flex-col overflow-hidden bg-muted/10 lg:overflow-y-auto">
+        <aside className="flex min-h-0 flex-col overflow-hidden bg-muted/10">
           <div className="sticky top-0 z-10 shrink-0 border-b border-border/60 bg-muted/10 px-4 py-2.5 backdrop-blur-sm">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               {translate("chaster.hq.support.case_detail")}
             </p>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+          <div className={cn(supportScrollAreaClass, "flex-1 px-4 py-3 sm:px-5 sm:py-4")}>
             {sidebar}
           </div>
         </aside>

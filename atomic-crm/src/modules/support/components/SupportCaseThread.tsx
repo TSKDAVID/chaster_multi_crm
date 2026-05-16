@@ -16,6 +16,7 @@ import { useCasePresence } from "../hooks/useCasePresence";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { supportScrollAreaClass } from "../lib/supportScroll";
 import type {
   SupportAttachmentMeta,
   SupportCaseMessageRow,
@@ -563,7 +564,7 @@ export function SupportCaseThread({
     <div
       className={cn(
         "flex flex-col",
-        embedded ? "h-full min-h-0 gap-2" : "min-h-[320px] gap-5",
+        embedded ? "h-full min-h-0 overflow-hidden gap-0" : "min-h-[320px] gap-5",
       )}
     >
       {showCaseMeta ? (
@@ -588,10 +589,9 @@ export function SupportCaseThread({
 
       <div
         className={cn(
-          "flex flex-col gap-3",
           embedded
-            ? "min-h-0 flex-1 overflow-y-auto justify-end"
-            : "max-h-[min(58vh,520px)] overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3 sm:p-4",
+            ? cn(supportScrollAreaClass, "flex-1")
+            : "flex max-h-[min(58vh,520px)] flex-col gap-3 overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3 sm:p-4",
         )}
       >
         <ErrorBoundary
@@ -603,6 +603,12 @@ export function SupportCaseThread({
           onError={(error) => {
             console.error("SupportCaseThread messages crashed", error);
           }}
+        >
+        <div
+          className={cn(
+            "flex flex-col gap-3",
+            embedded && "min-h-full justify-end pb-1",
+          )}
         >
         {messagesQ.isPending ? (
           <div className="flex flex-col gap-3 py-1">
@@ -691,6 +697,7 @@ export function SupportCaseThread({
             ),
           )
         )}
+        </div>
         </ErrorBoundary>
       </div>
 
