@@ -590,7 +590,7 @@ export function SupportCaseThread({
         className={cn(
           "flex flex-col gap-3",
           embedded
-            ? "min-h-0 flex-1 overflow-y-auto"
+            ? "min-h-0 flex-1 overflow-y-auto justify-end"
             : "max-h-[min(58vh,520px)] overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3 sm:p-4",
         )}
       >

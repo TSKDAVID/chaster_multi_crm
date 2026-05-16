@@ -742,11 +742,11 @@ export function HqSupportCaseDetailPage() {
   return (
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
+        <div className="flex min-h-0 flex-1 flex-col">
         <SupportViewportShell>
           {caseQ.isPending || !c ? (
-            <Skeleton className="h-full w-full" />
+            <Skeleton className="min-h-0 flex-1 w-full" />
           ) : (
-            <>
               <HqSupportCaseWorkspace
                 caseRow={c}
                 assigneeLabel={
@@ -993,6 +993,8 @@ export function HqSupportCaseDetailPage() {
                 />
                 }
               />
+          )}
+        </SupportViewportShell>
 
               <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
                 <DialogContent>
@@ -1138,9 +1140,7 @@ export function HqSupportCaseDetailPage() {
                 pending={closeCaseMut.isPending}
                 onConfirm={(payload) => closeCaseMut.mutate(payload)}
               />
-            </>
-          )}
-        </SupportViewportShell>
+        </div>
       </PermissionGate>
     </ChasterHQGuard>
   );

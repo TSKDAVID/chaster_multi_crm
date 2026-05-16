@@ -958,6 +958,7 @@ export function HqSupportCasesPage() {
   return (
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
+        <div className="flex min-h-0 flex-1 flex-col">
         <ErrorBoundary
           onError={(error, info) => logCrmError("HqSupportCasesPage", error, info)}
           fallbackRender={({ error, resetErrorBoundary }) => (
@@ -974,15 +975,15 @@ export function HqSupportCasesPage() {
           )}
         >
         <SupportViewportShell>
-        <div className="flex h-full min-h-0 flex-col gap-3 px-4 py-3 sm:px-5 sm:py-4">
-          <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
-            <div className="space-y-1">
-              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                <Headphones className="h-7 w-7 text-primary" />
+        <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 py-2 sm:px-4 sm:py-3">
+          <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <Headphones className="h-6 w-6 shrink-0 text-primary" />
+              <h1 className="text-lg font-semibold tracking-tight">
                 {translate("chaster.hq.support.cases_title")}
-                <UnreadBadge count={staffUnread.data ?? 0} />
               </h1>
-              <p className="max-w-xl text-sm text-muted-foreground">
+              <UnreadBadge count={staffUnread.data ?? 0} />
+              <p className="hidden w-full text-xs text-muted-foreground sm:block sm:w-auto sm:pl-1">
                 {translate("chaster.hq.support.console_subtitle")}
               </p>
             </div>
@@ -1725,6 +1726,7 @@ export function HqSupportCasesPage() {
         </Dialog>
         </SupportViewportShell>
         </ErrorBoundary>
+        </div>
       </PermissionGate>
     </ChasterHQGuard>
   );

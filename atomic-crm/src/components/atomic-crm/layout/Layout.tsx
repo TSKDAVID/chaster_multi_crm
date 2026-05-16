@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { ErrorBoundary } from "react-error-boundary";
 import { cn } from "@/lib/utils";
-import { isSupportViewportRoute, SUPPORT_VIEWPORT_HEIGHT } from "@/modules/support/lib/supportLayout";
+import { isSupportViewportRoute } from "@/modules/support/lib/supportLayout";
 import { Notification } from "@/components/admin/notification";
 import { CrmErrorFallback } from "../debug/CrmErrorFallback";
 import { CrmDebugPanel } from "../debug/CrmDebugPanel";
@@ -24,29 +24,30 @@ export const Layout = ({ children }: { children: ReactNode }) => {
     <ChasterAccessProvider>
       <SupabaseAuthHashRedirect />
       <ClientTenantBranding />
-      <Header />
-      <main
-        id="main-content"
-        className={cn(
-          supportViewport
-            ? "flex max-w-none flex-col overflow-hidden p-0"
-            : "mx-auto max-w-screen-xl px-4 pt-4",
-        )}
-        style={supportViewport ? { height: SUPPORT_VIEWPORT_HEIGHT } : undefined}
-      >
-        <ErrorBoundary
-          FallbackComponent={CrmErrorFallback}
-          onError={(error, info) => logCrmError("layout", error, info)}
+      <div className="flex min-h-dvh flex-col">
+        <Header />
+        <main
+          id="main-content"
+          className={cn(
+            supportViewport
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+              : "mx-auto w-full max-w-screen-xl flex-1 px-4 pt-4",
+          )}
         >
-          <Suspense fallback={<Skeleton className="h-12 w-12 rounded-full" />}>
-            <div
-              className={supportViewport ? "flex min-h-0 flex-1 flex-col" : undefined}
-            >
-              {children}
-            </div>
-          </Suspense>
-        </ErrorBoundary>
-      </main>
+          <ErrorBoundary
+            FallbackComponent={CrmErrorFallback}
+            onError={(error, info) => logCrmError("layout", error, info)}
+          >
+            <Suspense fallback={<Skeleton className="h-12 w-12 rounded-full" />}>
+              <div
+                className={supportViewport ? "flex min-h-0 flex-1 flex-col" : undefined}
+              >
+                {children}
+              </div>
+            </Suspense>
+          </ErrorBoundary>
+        </main>
+      </div>
       <CrmDebugPanel />
       <Notification />
     </ChasterAccessProvider>

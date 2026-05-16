@@ -64,14 +64,14 @@ export function HqSupportMetricsStrip({
             type="button"
             onClick={() => onSelect(active ? null : item.key)}
             className={cn(
-              "rounded-lg border px-3 py-2.5 text-left transition-colors",
+              "rounded-lg border px-2.5 py-2 text-left transition-colors",
               item.alert && !active && "border-red-500/30 bg-red-500/5",
               active
                 ? "border-primary bg-primary/10"
                 : "border-border/70 bg-muted/20 hover:bg-muted/40",
             )}
           >
-            <p className="text-xl font-semibold tabular-nums leading-none">
+            <p className="text-lg font-semibold tabular-nums leading-none">
               {item.value}
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">{item.label}</p>

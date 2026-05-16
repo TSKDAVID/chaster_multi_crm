@@ -32,7 +32,7 @@ export function HqSupportCaseWorkspace({
   const translate = useTranslate();
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden border-t border-border/80 bg-background">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border/80 bg-background">
       <header className="flex shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 py-2 sm:gap-3 sm:px-5">
         <Button variant="ghost" size="sm" asChild className="h-8 shrink-0 gap-1 px-2">
           <Link to="/hq/support/cases">
