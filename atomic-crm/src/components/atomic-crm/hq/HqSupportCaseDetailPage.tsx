@@ -10,10 +10,7 @@ import {
 import {
   CalendarClock,
   CheckCircle2,
-  Link2,
   RotateCcw,
-  Tag,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSupabaseClient } from "../providers/supabase/supabase";
@@ -23,14 +20,6 @@ import { useCurrentUserRole } from "../access/useCurrentUserRole";
 import { useAuthUserId } from "../access/useAuthUserId";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,7 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -54,8 +42,9 @@ import { Badge } from "@/components/ui/badge";
 import { SupportCaseThread } from "@/modules/support/components/SupportCaseThread";
 import { CloseCaseDialog } from "@/modules/support/components/CloseCaseDialog";
 import { CasePresenceBanner } from "@/modules/support/components/CasePresenceBanner";
-import { CsatPrompt } from "@/modules/support/components/CsatPrompt";
 import { HqSupportCaseWorkspace } from "@/modules/support/components/HqSupportCaseWorkspace";
+import { HqSupportCaseSidebar } from "@/modules/support/components/HqSupportCaseSidebar";
+import { SupportViewportShell } from "@/modules/support/components/SupportViewportShell";
 import { useCasePresence } from "@/modules/support/hooks/useCasePresence";
 import { safeSelectValue } from "@/modules/support/lib/selectValue";
 import { useChasterAccess } from "../access/chasterAccessContext";
@@ -272,24 +261,6 @@ function normalizeCaseDetail(
         ? (sr as SupportRequesterRow)
         : null,
   };
-}
-
-function TagInput({ caseId, currentTags, onUpdate }: { caseId: string; currentTags: string[]; onUpdate: () => void }) {
-  const [input, setInput] = useState("");
-  const notify = useNotify();
-  const addTag = async () => {
-    const tag = input.trim().toLowerCase();
-    if (!tag || currentTags.includes(tag)) return;
-    const { error } = await getSupabaseClient().from("support_cases").update({ tags: [...currentTags, tag] }).eq("id", caseId);
-    if (error) notify(error.message, { type: "error" });
-    else { setInput(""); onUpdate(); }
-  };
-  return (
-    <div className="flex gap-1.5">
-      <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Add tag..." className="text-xs h-7" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void addTag(); } }} />
-      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={!input.trim()} onClick={() => void addTag()}>Add</Button>
-    </div>
-  );
 }
 
 export function HqSupportCaseDetailPage() {
@@ -771,9 +742,9 @@ export function HqSupportCaseDetailPage() {
   return (
     <ChasterHQGuard>
       <PermissionGate permission="hq.support.cases.read">
-        <div className="p-4 md:p-6">
+        <SupportViewportShell>
           {caseQ.isPending || !c ? (
-            <Skeleton className="h-[min(520px,70vh)] w-full rounded-xl" />
+            <Skeleton className="h-full w-full" />
           ) : (
             <>
               <HqSupportCaseWorkspace
@@ -945,7 +916,7 @@ export function HqSupportCaseDetailPage() {
                   </>
                 }
                 conversation={
-                  <div className="space-y-4">
+                  <div className="flex h-full min-h-0 flex-col gap-2">
                     <CasePresenceBanner peers={presencePeers} variant="hq" />
                     {caseId ? (
                       <ErrorBoundary
@@ -966,409 +937,58 @@ export function HqSupportCaseDetailPage() {
                           </div>
                         )}
                       >
-                        <SupportCaseThread caseId={caseId} variant="hq" caseRow={c} />
+                        <SupportCaseThread
+                          caseId={caseId}
+                          variant="hq"
+                          caseRow={c}
+                          embedded
+                        />
                       </ErrorBoundary>
                     ) : null}
                   </div>
                 }
                 sidebar={
-                <div className="space-y-4">
-
-                  {c.satisfaction_submitted_at ? (
-                    <CsatPrompt
-                      caseId={c.id}
-                      readOnly
-                      rating={c.satisfaction_rating ?? null}
-                      comment={c.satisfaction_comment ?? null}
-                    />
-                  ) : null}
-                  <Card className="border-border/80 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">
-                        {translate("chaster.hq.support.case_description_title")}
-                      </CardTitle>
-                      <CardDescription>
-                        {translate("chaster.hq.support.case_description_hint")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {c.description?.trim() ? (
-                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                          {c.description.trim()}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          {translate("chaster.hq.support.case_description_empty")}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {c.related_case_id && relatedCaseQ.data ? (
-                    <Card className="border-border/80 shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Link2 className="h-4 w-4" />
-                          Related Case
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <Link
-                          to={`/hq/support/cases/${relatedCaseQ.data.id}`}
-                          className="block rounded-lg border p-3 hover:bg-muted/50 transition-colors"
-                        >
-                          <p className="font-medium text-sm">{relatedCaseQ.data.subject}</p>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                            <span className="font-mono">{relatedCaseQ.data.case_number}</span>
-                            <Badge variant="secondary" className="text-[10px]">{relatedCaseQ.data.status}</Badge>
-                          </div>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ) : null}
-
-                  {isProspectCase && c.support_requesters ? (
-                    <PermissionGate permission="hq.support.cases.manage">
-                      <Card className="border-border/80 shadow-sm border-amber-500/20">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base">
-                            {translate("chaster.hq.support.requester_card_title")}
-                          </CardTitle>
-                          <CardDescription>
-                            {translate("chaster.hq.support.requester_card_hint")}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">
-                              {translate("chaster.hq.support.prospect_organization")}
-                            </Label>
-                            <Input
-                              value={reqOrg}
-                              onChange={(e) => setReqOrg(e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs">
-                                {translate("chaster.hq.support.prospect_first_name")}
-                              </Label>
-                              <Input
-                                value={reqFirst}
-                                onChange={(e) => setReqFirst(e.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">
-                                {translate("chaster.hq.support.prospect_last_name")}
-                              </Label>
-                              <Input
-                                value={reqLast}
-                                onChange={(e) => setReqLast(e.target.value)}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">
-                              {translate("chaster.hq.support.prospect_email")}
-                            </Label>
-                            <Input
-                              type="email"
-                              value={reqEmail}
-                              onChange={(e) => setReqEmail(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">
-                              {translate("chaster.hq.support.prospect_phone")}
-                            </Label>
-                            <Input
-                              value={reqPhone}
-                              onChange={(e) => setReqPhone(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">
-                              {translate("chaster.hq.support.prospect_notes")}
-                            </Label>
-                            <Textarea
-                              rows={2}
-                              value={reqNotes}
-                              onChange={(e) => setReqNotes(e.target.value)}
-                              className="resize-y"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            disabled={requesterSaveMut.isPending}
-                            onClick={() => onSaveRequester()}
-                          >
-                            {translate("chaster.hq.support.requester_save")}
-                          </Button>
-                          <Separator />
-                          <p className="text-sm text-muted-foreground">
-                            {translate("chaster.hq.support.create_tenant_from_case_desc")}
-                          </p>
-                          <Button
-                            type="button"
-                            onClick={() => setProvisionOpen(true)}
-                          >
-                            {translate("chaster.hq.support.create_tenant_from_case")}
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </PermissionGate>
-                  ) : null}
-
-                  <PermissionGate permission="hq.support.cases.manage">
-                    <Card className="border-border/80 shadow-sm">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base">
-                          {translate("chaster.hq.support.case_detail")}
-                        </CardTitle>
-                        <CardDescription>
-                          {translate("chaster.hq.support.status_label")},{" "}
-                          {translate("chaster.hq.support.record_priority")},{" "}
-                          {translate("chaster.hq.support.record_source")}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            {translate("chaster.hq.support.status_label")}
-                          </Label>
-                          <Select
-                            value={safeStatus}
-                            onValueChange={(v) =>
-                              setStatus(v as SupportCaseStatus)
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">
-                                {translate("chaster.portal.support.case_open")}
-                              </SelectItem>
-                              <SelectItem value="in_progress">
-                                {translate(
-                                  "chaster.portal.support.case_in_progress",
-                                )}
-                              </SelectItem>
-                              <SelectItem value="pending_client">
-                                {translate(
-                                  "chaster.portal.support.case_pending_client",
-                                )}
-                              </SelectItem>
-                              <SelectItem value="resolved">
-                                {translate(
-                                  "chaster.portal.support.case_resolved",
-                                )}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            {translate("chaster.hq.support.record_priority")}
-                          </Label>
-                          <Select
-                            value={safePriority}
-                            onValueChange={(v) =>
-                              setPriority(v as SupportCasePriority)
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(
-                                [
-                                  "low",
-                                  "medium",
-                                  "high",
-                                  "urgent",
-                                ] as SupportCasePriority[]
-                              ).map((k) => (
-                                <SelectItem key={k} value={k}>
-                                  {translate(priorityLabelKey(k))}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            {translate("chaster.hq.support.record_source")}
-                          </Label>
-                          <Select
-                            value={safeSource}
-                            onValueChange={(v) =>
-                              setSource(v as SupportCaseSource)
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(
-                                [
-                                  "portal",
-                                  "phone",
-                                  "email",
-                                  "hq",
-                                  "other",
-                                  "prospect",
-                                ] as SupportCaseSource[]
-                              ).map((k) => (
-                                <SelectItem key={k} value={k}>
-                                  {translate(sourceLabelKey(k))}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs flex items-center gap-1.5">
-                            <CalendarClock className="h-3.5 w-3.5" />
-                            Follow-up Date
-                          </Label>
-                          {c.follow_up_at ? (
-                            <div className="flex items-center gap-2">
-                              <p className={cn(
-                                "text-sm font-medium",
-                                new Date(c.follow_up_at).getTime() < Date.now() && c.status !== "resolved" && "text-red-600"
-                              )}>
-                                {new Date(c.follow_up_at).toLocaleString()}
-                              </p>
-                              <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={async () => {
-                                const { error } = await getSupabaseClient().from("support_cases").update({ follow_up_at: null }).eq("id", caseId!);
-                                if (error) notify(error.message, { type: "error" });
-                                else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
-                              }}>
-                                Clear
-                              </Button>
-                            </div>
-                          ) : (
-                            <Input type="datetime-local" className="text-sm" onChange={async (e) => {
-                              if (!e.target.value) return;
-                              const { error } = await getSupabaseClient().from("support_cases").update({ follow_up_at: new Date(e.target.value).toISOString() }).eq("id", caseId!);
-                              if (error) notify(error.message, { type: "error" });
-                              else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
-                            }} />
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs flex items-center gap-1.5">
-                            <Tag className="h-3.5 w-3.5" />
-                            Tags
-                          </Label>
-                          <div className="flex flex-wrap gap-1.5">
-                            {caseTags.map((tag) => (
-                              <Badge key={tag} variant="secondary" className="gap-1 pr-1 text-xs">
-                                {tag}
-                                <button type="button" className="ml-0.5 h-3.5 w-3.5 rounded-full hover:bg-destructive/20 inline-flex items-center justify-center" onClick={async () => {
-                                  const updated = caseTags.filter((t) => t !== tag);
-                                  const { error } = await getSupabaseClient().from("support_cases").update({ tags: updated }).eq("id", caseId!);
-                                  if (error) notify(error.message, { type: "error" });
-                                  else void qc.invalidateQueries({ queryKey: ["support-case", caseId] });
-                                }}>
-                                  <X className="h-2.5 w-2.5" />
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                          <TagInput caseId={caseId!} currentTags={caseTags} onUpdate={() => void qc.invalidateQueries({ queryKey: ["support-case", caseId] })} />
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={assignSelf}
-                            disabled={saveMut.isPending}
-                          >
-                            {translate("chaster.hq.support.assign_self")}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setAssignOpen(true)}
-                            disabled={saveMut.isPending}
-                          >
-                            {translate("chaster.hq.support.assign_pick")}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={onSave}
-                            disabled={saveMut.isPending}
-                          >
-                            {saveMut.isPending
-                              ? translate("chaster.hq.support.saving")
-                              : translate("chaster.hq.support.save_actions")}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </PermissionGate>
-
-                  <Card className="border-border/80 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">
-                        {translate("chaster.hq.support.internal_notes")}
-                      </CardTitle>
-                      <CardDescription>
-                        {translate("chaster.hq.support.internal_notes_hint")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="max-h-52 space-y-2 overflow-y-auto text-sm">
-                        {(notesQ.data ?? []).map((n) => (
-                          <li
-                            key={n.id}
-                            className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5"
-                          >
-                            <div className="text-xs text-muted-foreground">
-                              {authorQ.data?.[n.author_id] ??
-                                n.author_id.slice(0, 8)}{" "}
-                              · {new Date(n.created_at).toLocaleString()}
-                            </div>
-                            <p className="mt-1.5 whitespace-pre-wrap leading-relaxed">
-                              {n.body}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                      <Separator />
-                      <div className="space-y-2">
-                        <Label className="text-xs">
-                          {translate("chaster.hq.support.internal_add")}
-                        </Label>
-                        <Textarea
-                          rows={3}
-                          value={noteBody}
-                          onChange={(e) => setNoteBody(e.target.value)}
-                          placeholder={translate(
-                            "chaster.hq.support.internal_add_placeholder",
-                          )}
-                          className="resize-y bg-background"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={!noteBody.trim() || noteMut.isPending}
-                          onClick={() => noteMut.mutate()}
-                        >
-                          {translate("chaster.hq.support.internal_add")}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <HqSupportCaseSidebar
+                  caseRow={c}
+                  caseId={caseId!}
+                  isProspectCase={isProspectCase}
+                  caseTags={caseTags}
+                  safeStatus={safeStatus}
+                  safePriority={safePriority}
+                  safeSource={safeSource}
+                  setStatus={setStatus}
+                  setPriority={setPriority}
+                  setSource={setSource}
+                  relatedCase={relatedCaseQ.data ?? null}
+                  reqOrg={reqOrg}
+                  setReqOrg={setReqOrg}
+                  reqFirst={reqFirst}
+                  setReqFirst={setReqFirst}
+                  reqLast={reqLast}
+                  setReqLast={setReqLast}
+                  reqEmail={reqEmail}
+                  setReqEmail={setReqEmail}
+                  reqPhone={reqPhone}
+                  setReqPhone={setReqPhone}
+                  reqNotes={reqNotes}
+                  setReqNotes={setReqNotes}
+                  onSaveRequester={onSaveRequester}
+                  requesterSavePending={requesterSaveMut.isPending}
+                  onOpenProvision={() => setProvisionOpen(true)}
+                  assignSelf={assignSelf}
+                  onSave={onSave}
+                  savePending={saveMut.isPending}
+                  onOpenAssign={() => setAssignOpen(true)}
+                  notes={notesQ.data ?? []}
+                  authorNames={authorQ.data}
+                  noteBody={noteBody}
+                  setNoteBody={setNoteBody}
+                  onAddNote={() => noteMut.mutate()}
+                  notePending={noteMut.isPending}
+                  onCaseInvalidate={() =>
+                    void qc.invalidateQueries({ queryKey: ["support-case", caseId] })
+                  }
+                />
                 }
               />
 
@@ -1518,7 +1138,7 @@ export function HqSupportCaseDetailPage() {
               />
             </>
           )}
-        </div>
+        </SupportViewportShell>
       </PermissionGate>
     </ChasterHQGuard>
   );

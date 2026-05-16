@@ -163,11 +163,14 @@ export function SupportCaseThread({
   caseId,
   variant,
   caseRow: caseRowProp,
+  embedded = false,
 }: {
   caseId: string;
   variant: Variant;
   /** When provided (HQ detail), skips a duplicate case fetch. */
   caseRow?: SupportCaseRow | null;
+  /** Fills parent flex column; single message scroll (no max-height box). */
+  embedded?: boolean;
 }) {
   const translate = useTranslate();
   const notify = useNotify();
@@ -505,7 +508,12 @@ export function SupportCaseThread({
 
   if (caseLoading || !c) {
     return (
-      <div className="flex min-h-[280px] flex-col gap-4">
+      <div
+        className={cn(
+          "flex flex-col gap-4",
+          embedded ? "h-full min-h-0" : "min-h-[280px]",
+        )}
+      >
         <div className="flex flex-wrap gap-2">
           <Skeleton className="h-6 w-24" />
           <Skeleton className="h-6 w-20" />
@@ -551,7 +559,12 @@ export function SupportCaseThread({
     );
 
   return (
-    <div className="flex min-h-[320px] flex-col gap-5">
+    <div
+      className={cn(
+        "flex flex-col",
+        embedded ? "h-full min-h-0 gap-3" : "min-h-[320px] gap-5",
+      )}
+    >
       {showCaseMeta ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -574,7 +587,10 @@ export function SupportCaseThread({
 
       <div
         className={cn(
-          "flex max-h-[min(58vh,520px)] flex-col gap-3 overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3 sm:p-4",
+          "flex flex-col gap-3",
+          embedded
+            ? "min-h-0 flex-1 overflow-y-auto"
+            : "max-h-[min(58vh,520px)] overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3 sm:p-4",
         )}
       >
         <ErrorBoundary
@@ -701,7 +717,15 @@ export function SupportCaseThread({
 
       {variant === "portal" && !resolved ? composer : null}
 
-      {variant === "hq" ? composer : null}
+      {variant === "hq" ? (
+        embedded ? (
+          <div className="shrink-0 border-t border-border/60 bg-background/95 pt-3 backdrop-blur-sm">
+            {composer}
+          </div>
+        ) : (
+          composer
+        )
+      ) : null}
     </div>
   );
 }

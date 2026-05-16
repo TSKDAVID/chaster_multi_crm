@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { SupportStatusPill } from "./SupportStatusPill";
 import type { SupportCaseRow, SupportRequesterRow } from "../supportTypes";
 import { tenantDisplayName } from "../lib/supportDisplay";
-import { cn } from "@/lib/utils";
 
 export type HqCaseWorkspaceRow = SupportCaseRow & {
   tenants?: { company_name: string } | null;
@@ -33,8 +32,8 @@ export function HqSupportCaseWorkspace({
   const translate = useTranslate();
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-7.5rem)] min-h-[520px] max-w-[1600px] flex-col overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm">
-      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border/80 bg-muted/15 px-4 py-3 sm:px-5">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border-t border-border/80 bg-background">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border/80 bg-background px-4 py-3 sm:px-5">
         <Button variant="ghost" size="sm" asChild className="h-8 gap-1 px-2">
           <Link to="/hq/support/cases">
             <ArrowLeft className="h-4 w-4" />
@@ -79,27 +78,26 @@ export function HqSupportCaseWorkspace({
       </header>
 
       {banners ? (
-        <div className="shrink-0 space-y-2 border-b border-border/80 px-4 py-2 sm:px-5">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-muted/10 px-4 py-2 sm:px-5">
           {banners}
         </div>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="flex min-h-0 flex-col border-b border-border/80 lg:border-b-0 lg:border-r">
-          <div className="shrink-0 border-b border-border/60 px-4 py-2 sm:px-5">
-            <p className="text-xs font-medium text-muted-foreground">
-              {translate("chaster.hq.support.conversation")}
+      <div className="mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="flex min-h-0 min-w-0 flex-col border-b border-border/80 bg-background lg:border-b-0 lg:border-r">
+          <div className="flex min-h-0 flex-1 flex-col px-4 py-3 sm:px-5 sm:py-4">
+            {conversation}
+          </div>
+        </section>
+        <aside className="flex min-h-0 flex-col overflow-hidden bg-muted/10 lg:overflow-y-auto">
+          <div className="sticky top-0 z-10 shrink-0 border-b border-border/60 bg-muted/10 px-4 py-2.5 backdrop-blur-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {translate("chaster.hq.support.case_detail")}
             </p>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">{conversation}</div>
-        </section>
-        <aside
-          className={cn(
-            "min-h-0 overflow-y-auto bg-muted/10 p-4 sm:p-5",
-            "max-h-[40vh] lg:max-h-none",
-          )}
-        >
-          {sidebar}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+            {sidebar}
+          </div>
         </aside>
       </div>
     </div>

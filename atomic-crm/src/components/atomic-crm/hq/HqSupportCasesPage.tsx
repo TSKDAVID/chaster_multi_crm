@@ -60,6 +60,7 @@ import { useSupportStaffUnreadTotal } from "@/modules/support/hooks/useSupportUn
 import { useSupportCaseSearch } from "@/modules/support/hooks/useSupportCaseSearch";
 import { HqSupportCaseListItem } from "@/modules/support/components/HqSupportCaseListItem";
 import { HqSupportCasePreview } from "@/modules/support/components/HqSupportCasePreview";
+import { SupportViewportShell } from "@/modules/support/components/SupportViewportShell";
 import { HqSupportFilterSheet } from "@/modules/support/components/HqSupportFilterSheet";
 import { HqSupportMetricsStrip } from "@/modules/support/components/HqSupportMetricsStrip";
 import {
@@ -972,7 +973,8 @@ export function HqSupportCasesPage() {
             </div>
           )}
         >
-        <div className="mx-auto flex h-[calc(100dvh-7.5rem)] min-h-[520px] max-w-[1600px] flex-col gap-4 p-4 md:p-6">
+        <SupportViewportShell>
+        <div className="flex h-full min-h-0 flex-col gap-3 px-4 py-3 sm:px-5 sm:py-4">
           <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
             <div className="space-y-1">
               <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
@@ -1017,7 +1019,7 @@ export function HqSupportCasesPage() {
             onSelect={onMetricSelect}
           />
 
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm lg:flex-row">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border/80 bg-background lg:flex-row">
             <section className="flex w-full min-h-0 flex-col border-b border-border/80 lg:w-[380px] lg:max-w-[42%] lg:shrink-0 lg:border-b-0 lg:border-r">
               <div className="shrink-0 space-y-3 border-b border-border/80 p-3">
                 <div className="relative">
@@ -1199,9 +1201,8 @@ export function HqSupportCasesPage() {
             </section>
           </div>
         </div>
-        </ErrorBoundary>
 
-          <Dialog
+        <Dialog
             open={newOpen}
             onOpenChange={(o) => {
               setNewOpen(o);
@@ -1721,7 +1722,9 @@ export function HqSupportCasesPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+        </Dialog>
+        </SupportViewportShell>
+        </ErrorBoundary>
       </PermissionGate>
     </ChasterHQGuard>
   );

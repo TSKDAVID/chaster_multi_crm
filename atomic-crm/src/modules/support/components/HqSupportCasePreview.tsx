@@ -106,7 +106,7 @@ export function HqSupportCasePreview({
           ) : null}
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="flex min-h-0 flex-1 flex-col px-4 py-3 sm:px-5 sm:py-4">
         <ErrorBoundary
           fallbackRender={({ resetErrorBoundary }) => (
             <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -117,7 +117,7 @@ export function HqSupportCasePreview({
             </div>
           )}
         >
-          <SupportCaseThread caseId={caseId} variant="hq" caseRow={c} />
+          <SupportCaseThread caseId={caseId} variant="hq" caseRow={c} embedded />
         </ErrorBoundary>
       </div>
     </div>
