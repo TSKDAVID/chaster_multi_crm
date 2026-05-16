@@ -33,8 +33,8 @@ export function HqSupportCaseWorkspace({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden border-t border-border/80 bg-background">
-      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border/80 bg-background px-4 py-3 sm:px-5">
-        <Button variant="ghost" size="sm" asChild className="h-8 gap-1 px-2">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 py-2 sm:gap-3 sm:px-5">
+        <Button variant="ghost" size="sm" asChild className="h-8 shrink-0 gap-1 px-2">
           <Link to="/hq/support/cases">
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">
@@ -42,29 +42,31 @@ export function HqSupportCaseWorkspace({
             </span>
           </Link>
         </Button>
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-muted-foreground">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="shrink-0 font-mono text-[11px] leading-none text-muted-foreground">
               {caseRow.case_number}
             </span>
-            <SupportStatusPill status={caseRow.status} priority={caseRow.priority} />
-            {isProspect ? (
-              <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
-                {translate("chaster.hq.support.prospect_badge")}
-              </span>
-            ) : null}
+            <div className="flex shrink-0 items-center gap-1.5">
+              <SupportStatusPill status={caseRow.status} priority={caseRow.priority} />
+              {isProspect ? (
+                <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-800 dark:text-amber-200">
+                  {translate("chaster.hq.support.prospect_badge")}
+                </span>
+              ) : null}
+            </div>
+            <h1 className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight sm:text-base">
+              {caseRow.subject}
+            </h1>
           </div>
-          <h1 className="truncate text-base font-semibold sm:text-lg">
-            {caseRow.subject}
-          </h1>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
             {tenantDisplayName(caseRow) ||
               translate("chaster.hq.support.prospect_no_tenant")}
-            <span className="mx-1.5 text-muted-foreground/50">·</span>
+            <span className="mx-1 text-muted-foreground/50">·</span>
             {translate("chaster.hq.support.assignee_label")}: {assigneeLabel}
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {caseRow.tenant_id ? (
             <Button variant="outline" size="sm" asChild className="h-8 gap-1">
               <Link to={`/hq/companies/${caseRow.tenant_id}`}>
@@ -78,7 +80,7 @@ export function HqSupportCaseWorkspace({
       </header>
 
       {banners ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-muted/10 px-4 py-2 sm:px-5">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-muted/10 px-3 py-1.5 sm:px-5">
           {banners}
         </div>
       ) : null}

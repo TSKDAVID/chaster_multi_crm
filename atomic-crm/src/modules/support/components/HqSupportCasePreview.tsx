@@ -72,16 +72,18 @@ export function HqSupportCasePreview({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/80 bg-muted/15 px-4 py-3">
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/80 bg-muted/15 px-3 py-2 sm:px-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="shrink-0 font-mono text-[11px] leading-none text-muted-foreground">
               {c.case_number}
             </span>
             <SupportStatusPill status={c.status} priority={c.priority} />
+            <h2 className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight">
+              {c.subject}
+            </h2>
           </div>
-          <h2 className="text-base font-semibold leading-snug">{c.subject}</h2>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
             {tenantDisplayName(c) || translate("chaster.hq.support.prospect_no_tenant")}
           </p>
         </div>

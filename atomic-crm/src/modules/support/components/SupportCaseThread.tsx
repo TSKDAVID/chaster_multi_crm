@@ -537,6 +537,7 @@ export function SupportCaseThread({
         onSend={() => void onSend()}
         sending={sendMut.isPending}
         disabled={resolved}
+        embedded={embedded}
       />
     ) : (
       <SafeSupportComposer
@@ -719,7 +720,7 @@ export function SupportCaseThread({
 
       {variant === "hq" ? (
         embedded ? (
-          <div className="shrink-0 border-t border-border/60 bg-background/95 pt-3 backdrop-blur-sm">
+          <div className="shrink-0 border-t border-border/60 bg-background/95 pb-1 pt-2 backdrop-blur-sm">
             {composer}
           </div>
         ) : (
