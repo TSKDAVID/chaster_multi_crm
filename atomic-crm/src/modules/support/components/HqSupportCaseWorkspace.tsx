@@ -87,7 +87,7 @@ export function HqSupportCaseWorkspace({
 
       <div className="mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="flex min-h-0 min-w-0 flex-col border-b border-border/80 bg-background lg:border-b-0 lg:border-r">
-          <div className="flex min-h-0 flex-1 flex-col px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-2 sm:px-4 sm:py-3">
             {conversation}
           </div>
         </section>

@@ -563,7 +563,7 @@ export function SupportCaseThread({
     <div
       className={cn(
         "flex flex-col",
-        embedded ? "h-full min-h-0 gap-3" : "min-h-[320px] gap-5",
+        embedded ? "h-full min-h-0 gap-2" : "min-h-[320px] gap-5",
       )}
     >
       {showCaseMeta ? (
@@ -720,7 +720,7 @@ export function SupportCaseThread({
 
       {variant === "hq" ? (
         embedded ? (
-          <div className="shrink-0 border-t border-border/60 bg-background/95 pb-1 pt-2 backdrop-blur-sm">
+          <div className="shrink-0 border-t border-border/60 bg-background/95 px-0 pb-0 pt-1.5 backdrop-blur-sm">
             {composer}
           </div>
         ) : (

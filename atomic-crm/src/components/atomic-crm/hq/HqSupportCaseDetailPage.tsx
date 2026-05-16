@@ -919,31 +919,33 @@ export function HqSupportCaseDetailPage() {
                   <div className="flex h-full min-h-0 flex-col gap-2">
                     <CasePresenceBanner peers={presencePeers} variant="hq" />
                     {caseId ? (
-                      <ErrorBoundary
-                        onError={(error) => {
-                          console.error("SupportCaseThread crashed", error);
-                        }}
-                        fallbackRender={({ resetErrorBoundary }) => (
-                          <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                            <p>{translate("chaster.hq.support.thread_load_error")}</p>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={resetErrorBoundary}
-                            >
-                              {translate("ra.action.refresh")}
-                            </Button>
-                          </div>
-                        )}
-                      >
-                        <SupportCaseThread
-                          caseId={caseId}
-                          variant="hq"
-                          caseRow={c}
-                          embedded
-                        />
-                      </ErrorBoundary>
+                      <div className="flex min-h-0 flex-1 flex-col">
+                        <ErrorBoundary
+                          onError={(error) => {
+                            console.error("SupportCaseThread crashed", error);
+                          }}
+                          fallbackRender={({ resetErrorBoundary }) => (
+                            <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                              <p>{translate("chaster.hq.support.thread_load_error")}</p>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={resetErrorBoundary}
+                              >
+                                {translate("ra.action.refresh")}
+                              </Button>
+                            </div>
+                          )}
+                        >
+                          <SupportCaseThread
+                            caseId={caseId}
+                            variant="hq"
+                            caseRow={c}
+                            embedded
+                          />
+                        </ErrorBoundary>
+                      </div>
                     ) : null}
                   </div>
                 }
