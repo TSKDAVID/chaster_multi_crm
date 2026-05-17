@@ -28,6 +28,7 @@ import { useHqTenantDirectory } from "./useHqQueries";
 import type { HqTenantDirectoryRow } from "./hqTypes";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { cn } from "@/lib/utils";
+import { ResizableSplitPane } from "@/components/ui/ResizableSplitPane";
 
 type HqMsgTab = "clients" | "internal";
 
@@ -304,43 +305,51 @@ export function HqMessagesPage() {
             </Tabs>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0">
-            <div
-              className={cn(
-                "flex flex-col border border-border rounded-lg bg-card min-h-0 md:w-[320px] shrink-0",
-                mobileThread ? "hidden md:flex" : "flex flex-1 md:flex-none",
-              )}
-            >
-              <div className="flex items-center justify-between px-3 py-3 border-b border-border shrink-0 gap-2">
-                <span className="font-semibold text-sm truncate">
-                  {tab === "clients"
-                    ? translate("chaster.messages.client_conversations")
-                    : translate("chaster.messages.internal_conversations")}
-                </span>
-                {can("hq.messages.send") ? (
-                  <Button type="button" size="sm" onClick={openStartPicker}>
-                    {translate("chaster.messages.start_conversation")}
-                  </Button>
-                ) : null}
-              </div>
-              <ConversationList
-                loading={listLoading}
-                sections={sections}
-                selectedId={selectedId}
-                onSelect={(id) => {
-                  setSelectedForTab(id);
-                  setMobileThread(true);
-                }}
-              />
-            </div>
-
-            <div
-              className={cn(
-                "flex flex-col flex-1 min-h-0 min-w-0",
-                !mobileThread ? "hidden md:flex" : "flex",
-              )}
-            >
-              <div className="md:hidden flex items-center gap-2 mb-2">
+          <ResizableSplitPane
+            storageKey="chaster.hq.messages.list-width"
+            defaultWidth={320}
+            minWidth={260}
+            maxWidth={520}
+            maxFraction={0.5}
+            panelSide="start"
+            enableFrom="md"
+            className="flex flex-1 min-h-0 flex-col gap-4 md:flex-row"
+            panelClassName={cn(
+              "flex min-h-0 flex-col rounded-lg border border-border bg-card",
+              mobileThread ? "hidden md:flex" : "flex flex-1 md:flex-none",
+            )}
+            mainClassName={cn(
+              "flex min-h-0 min-w-0 flex-1 flex-col",
+              !mobileThread ? "hidden md:flex" : "flex",
+            )}
+            panel={
+              <>
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
+                  <span className="truncate text-sm font-semibold">
+                    {tab === "clients"
+                      ? translate("chaster.messages.client_conversations")
+                      : translate("chaster.messages.internal_conversations")}
+                  </span>
+                  {can("hq.messages.send") ? (
+                    <Button type="button" size="sm" onClick={openStartPicker}>
+                      {translate("chaster.messages.start_conversation")}
+                    </Button>
+                  ) : null}
+                </div>
+                <ConversationList
+                  loading={listLoading}
+                  sections={sections}
+                  selectedId={selectedId}
+                  onSelect={(id) => {
+                    setSelectedForTab(id);
+                    setMobileThread(true);
+                  }}
+                />
+              </>
+            }
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="mb-2 flex items-center gap-2 md:hidden">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setMobileThread(false)}>
                   ← {translate("chaster.messages.back_to_list")}
                 </Button>
@@ -355,7 +364,7 @@ export function HqMessagesPage() {
                 namesByUserId={namesByUserId}
               />
             </div>
-          </div>
+          </ResizableSplitPane>
         </div>
 
         <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>

@@ -21,6 +21,7 @@ import { usePresence } from "@/modules/messaging/hooks/usePresence";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseClient } from "../providers/supabase/supabase";
 import { cn } from "@/lib/utils";
+import { ResizableSplitPane } from "@/components/ui/ResizableSplitPane";
 
 function otherDmPeer(c: ConversationRow, myId: string): string | null {
   if (c.type !== "team_dm") return null;
@@ -229,42 +230,50 @@ export function PortalMessagesPage() {
           <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
             {translate("chaster.portal.messages_scope_hint")}
           </p>
-          <div className="mt-6 flex flex-col md:flex-row gap-4 h-[calc(100dvh-12rem)] min-h-[420px]">
-            <div
-              className={cn(
-                "flex flex-col border border-border rounded-lg bg-card min-h-0 md:w-[320px] shrink-0",
-                mobileThread ? "hidden md:flex" : "flex flex-1 md:flex-none",
-              )}
-            >
-              <div className="flex items-center justify-between px-3 py-3 border-b border-border shrink-0">
-                <h2 className="text-lg font-semibold">{translate("chaster.messages.title")}</h2>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  aria-label={translate("chaster.messages.new_message")}
-                  disabled={!myId}
-                  onClick={() => setNewDmOpen(true)}
-                >
-                  <MessageSquarePlus className="h-4 w-4" />
-                </Button>
-              </div>
-              <ConversationList
-                loading={authUserLoading || !myId || teamQ.isLoading || hqQ.isLoading}
-                sections={sections}
-                selectedId={selectedId}
-                onSelect={selectConversation}
-                presenceByUserId={presenceMap}
-              />
-            </div>
-
-            <div
-              className={cn(
-                "flex flex-col flex-1 min-h-0 min-w-0",
-                !mobileThread ? "hidden md:flex" : "flex",
-              )}
-            >
-              <div className="md:hidden flex items-center gap-2 mb-2">
+          <ResizableSplitPane
+            storageKey="chaster.portal.messages.list-width"
+            defaultWidth={320}
+            minWidth={260}
+            maxWidth={520}
+            maxFraction={0.5}
+            panelSide="start"
+            enableFrom="md"
+            className="mt-6 flex h-[calc(100dvh-12rem)] min-h-[420px] flex-col gap-4 md:flex-row"
+            panelClassName={cn(
+              "flex min-h-0 flex-col rounded-lg border border-border bg-card",
+              mobileThread ? "hidden md:flex" : "flex flex-1 md:flex-none",
+            )}
+            mainClassName={cn(
+              "flex min-h-0 min-w-0 flex-1 flex-col",
+              !mobileThread ? "hidden md:flex" : "flex",
+            )}
+            panel={
+              <>
+                <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-3">
+                  <h2 className="text-lg font-semibold">{translate("chaster.messages.title")}</h2>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    aria-label={translate("chaster.messages.new_message")}
+                    disabled={!myId}
+                    onClick={() => setNewDmOpen(true)}
+                  >
+                    <MessageSquarePlus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <ConversationList
+                  loading={authUserLoading || !myId || teamQ.isLoading || hqQ.isLoading}
+                  sections={sections}
+                  selectedId={selectedId}
+                  onSelect={selectConversation}
+                  presenceByUserId={presenceMap}
+                />
+              </>
+            }
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="mb-2 flex items-center gap-2 md:hidden">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setMobileThread(false)}>
                   ← {translate("chaster.messages.back_to_list")}
                 </Button>
@@ -280,7 +289,7 @@ export function PortalMessagesPage() {
                 presenceForOther={presenceForOther}
               />
             </div>
-          </div>
+          </ResizableSplitPane>
         </div>
 
         {tenantId && myId ? (

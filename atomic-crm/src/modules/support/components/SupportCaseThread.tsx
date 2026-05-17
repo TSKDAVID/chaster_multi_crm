@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supportScrollAreaClass } from "../lib/supportScroll";
+import { reopenSupportCase } from "../lib/reopenSupportCase";
 import type {
   SupportAttachmentMeta,
   SupportCaseMessageRow,
@@ -395,10 +396,9 @@ export function SupportCaseThread({
 
   const reopenMut = useMutation({
     mutationFn: async () => {
-      const { error } = await getSupabaseClient().rpc("reopen_support_case", {
-        p_case_id: caseId,
+      await reopenSupportCase(getSupabaseClient(), caseId, {
+        asStaff: variant === "hq",
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["support-case-thread", caseId] });

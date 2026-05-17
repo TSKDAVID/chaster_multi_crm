@@ -40,6 +40,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { SupportCaseThread } from "@/modules/support/components/SupportCaseThread";
+import { reopenSupportCase } from "@/modules/support/lib/reopenSupportCase";
 import { CloseCaseDialog } from "@/modules/support/components/CloseCaseDialog";
 import { CasePresenceBanner } from "@/modules/support/components/CasePresenceBanner";
 import { HqSupportCaseWorkspace } from "@/modules/support/components/HqSupportCaseWorkspace";
@@ -514,10 +515,9 @@ export function HqSupportCaseDetailPage() {
 
   const reopenMut = useMutation({
     mutationFn: async () => {
-      const { error } = await getSupabaseClient().rpc("reopen_support_case", {
-        p_case_id: caseId!,
+      await reopenSupportCase(getSupabaseClient(), caseId!, {
+        asStaff: true,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       notify(translate("chaster.portal.support.case_reopened"), {

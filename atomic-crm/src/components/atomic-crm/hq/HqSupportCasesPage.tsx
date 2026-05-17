@@ -72,6 +72,7 @@ import {
 import { CHASTER_SELECT_NONE } from "../sales/SalesProvisioningInputs";
 import { UnreadBadge } from "@/modules/messaging/components/UnreadBadge";
 import { cn } from "@/lib/utils";
+import { ResizableSplitPane } from "@/components/ui/ResizableSplitPane";
 
 const PAGE_SIZE = 25;
 
@@ -1023,8 +1024,18 @@ export function HqSupportCasesPage() {
           />
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border/80 bg-background lg:flex-row">
-            <section className="flex min-h-0 w-full flex-col border-b border-border/80 lg:w-[380px] lg:max-w-[42%] lg:shrink-0 lg:border-b-0 lg:border-r">
+          <ResizableSplitPane
+            storageKey="chaster.hq.support.inbox-list-width"
+            defaultWidth={380}
+            minWidth={280}
+            maxWidth={560}
+            maxFraction={0.55}
+            panelSide="start"
+            enableFrom="lg"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border/80 bg-background"
+            panelClassName="border-b border-border/80 lg:border-b-0 lg:border-r"
+            panel={
+              <>
               <div className="shrink-0 space-y-3 border-b border-border/80 p-3">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1186,8 +1197,9 @@ export function HqSupportCasesPage() {
                   </div>
                 </div>
               ) : null}
-            </section>
-
+              </>
+            }
+          >
             <section className="hidden min-h-0 min-w-0 flex-1 flex-col lg:flex">
               {selectedCaseId ? (
                 <HqSupportCasePreview caseId={selectedCaseId} onClose={clearCaseSelection} />
@@ -1203,7 +1215,7 @@ export function HqSupportCasesPage() {
                 </div>
               )}
             </section>
-          </div>
+          </ResizableSplitPane>
         </div>
 
         </SupportViewportShell>
