@@ -1032,7 +1032,7 @@ export function HqSupportCasesPage() {
             maxFraction={0.55}
             panelSide="start"
             enableFrom="lg"
-            className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border/80 bg-background"
+            className="min-h-0 flex-1 overflow-hidden border border-border/80 bg-background"
             panelClassName="border-b border-border/80 lg:border-b-0 lg:border-r"
             panel={
               <>
@@ -1200,7 +1200,7 @@ export function HqSupportCasesPage() {
               </>
             }
           >
-            <section className="hidden min-h-0 min-w-0 flex-1 flex-col lg:flex">
+            <section className="flex min-h-0 min-w-0 flex-1 flex-col max-lg:hidden">
               {selectedCaseId ? (
                 <HqSupportCasePreview caseId={selectedCaseId} onClose={clearCaseSelection} />
               ) : (

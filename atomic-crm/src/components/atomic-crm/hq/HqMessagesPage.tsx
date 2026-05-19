@@ -313,7 +313,7 @@ export function HqMessagesPage() {
             maxFraction={0.5}
             panelSide="start"
             enableFrom="md"
-            className="flex flex-1 min-h-0 flex-col gap-4 md:flex-row"
+            className="min-h-0 flex-1 gap-4"
             panelClassName={cn(
               "flex min-h-0 flex-col rounded-lg border border-border bg-card",
               mobileThread ? "hidden md:flex" : "flex flex-1 md:flex-none",

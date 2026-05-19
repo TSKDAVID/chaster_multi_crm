@@ -238,7 +238,7 @@ export function PortalMessagesPage() {
             maxFraction={0.5}
             panelSide="start"
             enableFrom="md"
-            className="mt-6 flex h-[calc(100dvh-12rem)] min-h-[420px] flex-col gap-4 md:flex-row"
+            className="mt-6 flex h-[calc(100dvh-12rem)] min-h-[420px] gap-4"
             panelClassName={cn(
               "flex min-h-0 flex-col rounded-lg border border-border bg-card",
               mobileThread ? "hidden md:flex" : "flex flex-1 md:flex-none",

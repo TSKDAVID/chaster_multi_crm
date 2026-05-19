@@ -77,7 +77,7 @@ export function ResizableSplitPane({
       onDoubleClick={resetWidth}
       className={cn(
         "group relative z-10 flex w-2 shrink-0 touch-none items-center justify-center",
-        "cursor-col-resize border-x border-transparent bg-transparent",
+        "pointer-events-auto cursor-col-resize border-x border-transparent bg-transparent",
         "hover:border-border/80 hover:bg-muted/40",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
       )}
@@ -93,7 +93,7 @@ export function ResizableSplitPane({
     <aside
       className={cn(
         "flex min-h-0 min-w-0 flex-col overflow-hidden",
-        !resizable && "w-full",
+        resizable ? "shrink-0" : "w-full flex-1",
         panelClassName,
       )}
       style={panelStyle}
@@ -112,9 +112,9 @@ export function ResizableSplitPane({
     <div
       ref={containerRef}
       className={cn(
-        "flex min-h-0 min-w-0",
-        resizable ? "flex-row" : "flex-col",
+        "flex min-h-0 min-w-0 overflow-hidden",
         className,
+        resizable ? "flex-row" : "flex-col",
       )}
     >
       {panelSide === "start" ? (
